@@ -14,7 +14,7 @@ st.set_page_config(
 # Chave da API do TMDb integrada
 API_KEY = "81b9f974da505f74247634bd774323b9"
 
-# --- ESTILIZAÇÃO CSS (PADRÃO TMDB & BOTÕES VISÍVEIS) ---
+# --- ESTILIZAÇÃO CSS (PADRÃO TMDB) ---
 st.markdown(
     """
     <style>
@@ -26,15 +26,15 @@ st.markdown(
         footer {visibility: hidden;}
         header {visibility: hidden;}
         
-        /* Navbar Superior */
+        /* Navbar Superior Estilo TMDb */
         .top-navbar {
             background-color: #032541;
-            padding: 15px 30px;
+            padding: 15px 10px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid #0d253f;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         .nav-logo {
             font-size: 26px;
@@ -43,8 +43,18 @@ st.markdown(
             text-decoration: none;
             letter-spacing: 1px;
         }
+        .nav-link {
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 16px;
+            text-decoration: none;
+            margin-left: 20px;
+        }
+        .nav-link:hover {
+            color: #01b4e4;
+        }
         
-        /* Estilização para forçar o botão do Streamlit a ficar com texto visível e chamativo */
+        /* Botões Estilizados */
         div.stButton > button {
             background-color: #01b4e4 !important;
             color: white !important;
@@ -66,7 +76,6 @@ st.markdown(
 
 # --- FUNÇÃO PARA BUSCAR DETALHES, TRAILER E STREAMINGS ---
 def buscar_detalhes_filme(movie_id):
-    # Buscar Elenco
     creditos_url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}&language=pt-BR"
     elenco = []
     try:
@@ -88,7 +97,6 @@ def buscar_detalhes_filme(movie_id):
     except Exception:
         pass
 
-    # Buscar Provedores de Streaming (Onde Assistir no Brasil - BR)
     provedores = []
     watch_url = f"https://api.themoviedb.org/3/movie/{movie_id}/watch/providers?api_key={API_KEY}"
     try:
@@ -96,7 +104,6 @@ def buscar_detalhes_filme(movie_id):
         if resp_w.status_code == 200:
             results = resp_w.json().get("results", {})
             br_data = results.get("BR", {})
-            # Junta opções de streaming (flatrate), aluguel (rent) e compra (buy)
             for tipo in ["flatrate", "rent", "buy"]:
                 for p in br_data.get(tipo, []):
                     nome_provedor = p.get("provider_name")
@@ -117,7 +124,6 @@ def buscar_detalhes_filme(movie_id):
     except Exception:
         pass
 
-    # Buscar Trailer
     videos_url = f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}&language=pt-BR"
     trailer_url = None
     try:
@@ -199,11 +205,36 @@ else:
     if "filme_selecionado" not in st.session_state:
         st.session_state.filme_selecionado = None
 
+    # --- NAVBAR SUPERIOR PADRÃO TMDB ---
+    col_logo, col_nav = st.columns([1.5, 4])
+    with col_logo:
+        if st.button("CineDicas 🎬", key="home_logo_btn"):
+            st.session_state.filme_selecionado = None
+            st.rerun()
+    with col_nav:
+        st.markdown(
+            """
+            <div style="display: flex; align-items: center; height: 40px; gap: 25px; justify-content: flex-start;">
+                <span style="color: #ffffff; font-weight: 600; cursor: pointer;">Filmes</span>
+                <span style="color: #ffffff; font-weight: 600; cursor: pointer;">Séries</span>
+                <span style="color: #ffffff; font-weight: 600; cursor: pointer;">Pessoas</span>
+                <span style="color: #ffffff; font-weight: 600; cursor: pointer;">Awards</span>
+                <span style="color: #ffffff; font-weight: 600; cursor: pointer;">Mais</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.markdown(
+        "<hr style='margin-top: 0px; border-color: #0d253f;'>",
+        unsafe_allow_html=True,
+    )
+
     # --- TELA DE DETALHES ---
     if st.session_state.filme_selecionado is not None:
         filme = st.session_state.filme_selecionado
 
-        if st.button("⬅ Voltar para Início"):
+        if st.button("⬅ Voltar para Início", key="voltar_btn"):
             st.session_state.filme_selecionado = None
             st.rerun()
 
@@ -261,7 +292,6 @@ else:
                         unsafe_allow_html=True,
                     )
 
-                # Onde Assistir (Streamings disponíveis)
                 st.markdown(
                     "<h3 style='margin-top: 15px;'>Onde Assistir</h3>",
                     unsafe_allow_html=True,
@@ -296,7 +326,6 @@ else:
 
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # Seção de Elenco
         if elenco:
             st.markdown(
                 "<h3 style='color: white; margin-top: 30px; margin-bottom: 20px;'>Elenco Principal</h3>",
@@ -317,15 +346,6 @@ else:
 
     else:
         # --- TELA PRINCIPAL (HOME) ---
-        st.markdown(
-            """
-            <div class="top-navbar">
-                <div class="nav-logo">CineDicas 🎬</div>
-            </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
         backdrops_disponiveis = [
             item["backdrop"] for item in catalogo if item.get("backdrop")
         ]
@@ -395,7 +415,6 @@ else:
                                 """,
                                 unsafe_allow_html=True,
                             )
-                            # Botão estilizado para abrir os detalhes
                             if st.button("Ver Detalhes", key=f"btn_{filme['id']}"):
                                 st.session_state.filme_selecionado = filme
                                 st.rerun()
