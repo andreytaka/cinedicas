@@ -59,7 +59,31 @@ st.markdown(
 )
 
 
-# --- FUNÇÃO PARA BUSCAR FILMES DA API DO TMDB ---
+# --- FUNÇÃO PARA BUSCAR TRAILER NO YOUTUBE VIA TMDB ---
+def buscar_trailer(movie_id):
+    url = f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}&language=pt-BR"
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            videos = response.json().get("results", [])
+            # Procura por um trailer oficial no YouTube
+            for v in videos:
+                if v.get("site") == "YouTube" and v.get("type") == "Trailer":
+                    return f"https://www.youtube.com/watch?v={v.get('key')}"
+            # Se não achar em português, tenta em inglês
+            url_en = f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}&language=en-US"
+            resp_en = requests.get(url_en)
+            if resp_en.status_code == 200:
+                videos_en = resp_en.json().get("results", [])
+                for v in videos_en:
+                    if v.get("site") == "YouTube" and v.get("type") == "Trailer":
+                        return f"https://www.youtube.com/watch?v={v.get('key')}"
+    except Exception:
+        pass
+    return None
+
+
+# --- FUNÇÃO PARA BUSCAR CATÁLOGO ---
 @st.cache_data
 def carregar_catalogo():
     url = f"https://api.themoviedb.org/3/trending/movie/week?api_key={API_KEY}&language=pt-BR"
@@ -69,11 +93,16 @@ def carregar_catalogo():
             data = response.json()
             filmes = []
             for item in data.get("results", []):
+                movie_id = item.get("id")
                 poster_path = item.get("poster_path")
                 backdrop_path = item.get("backdrop_path")
+
+                # Busca o trailer do filme
+                trailer_url = buscar_trailer(movie_id)
+
                 filmes.append(
                     {
-                        "id": item.get("id"),
+                        "id": movie_id,
                         "titulo": item.get(
                             "title", item.get("name", "Sem Título")
                         ),
@@ -92,6 +121,7 @@ def carregar_catalogo():
                         ),
                         "voto": round(item.get("vote_average", 0) * 10),
                         "visao": item.get("overview", "Sem sinopse disponível."),
+                        "trailer": trailer_url,
                     }
                 )
             return filmes
@@ -107,7 +137,7 @@ if not catalogo:
         "Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão."
     )
 else:
-    # --- HERO BANNER DINÂMICO DE BOAS-VINDAS ---
+    # --- HERO BANNER DINÂMICO ---
     backdrops_disponiveis = [
         item["backdrop"] for item in catalogo if item.get("backdrop")
     ]
@@ -158,7 +188,6 @@ else:
         label_visibility="collapsed",
     )
 
-    # Filtrar catálogo se houver pesquisa
     filmes_exibidos = catalogo
     if pesquisa:
         filmes_exibidos = [
@@ -176,7 +205,6 @@ else:
     if not filmes_exibidos:
         st.warning("Nenhum filme encontrado com esse termo.")
     else:
-        # Exibição em grade interativa (4 colunas)
         cols_por_linha = 4
         for i in range(0, len(filmes_exibidos), cols_por_linha):
             cols = st.columns(cols_por_linha)
@@ -193,6 +221,14 @@ else:
                             """,
                             unsafe_allow_html=True,
                         )
-                        # Botão para ver a sinopse / detalhes
-                        with st.expander("Ver Sinopse"):
+
+                        # Botão de Trailer (se disponível)
+                        if filme["trailer"]:
+                            st.markdown(
+                                f'<a href="{filme["trailer"]}" target="_blank"><button style="width:100%; background-color:#01b4e4; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer; margin-bottom:5px;">▶ Ver Trailer</button></a>',
+                                unsafe_allow_html=True,
+                            )
+
+                        # Expander para a Sinopse
+                        with st.expander("Sinopse"):
                             st.write(filme["visao"])
