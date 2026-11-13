@@ -84,17 +84,17 @@ def buscar_detalhes_filme(movie_id):
                 if v.get("site") == "YouTube" and v.get("type") == "Trailer":
                     trailer_url = f"https://www.youtube.com/watch?v={v.get('key')}"
                     break
+        
+        # Se não achar em português, tenta em inglês
         if not trailer_url:
-            # Tenta em inglês se não achar em pt
             resp_en = requests.get(
                 f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}&language=en-US"
             )
             if resp_en.status_code == 200:
-                for v in resp_en_json := resp_en.json().get("results", []):
+                videos_en = resp_en.json().get("results", [])
+                for v in videos_en:
                     if v.get("site") == "YouTube" and v.get("type") == "Trailer":
-                        trailer_url = (
-                            f"https://www.youtube.com/watch?v={v.get('key')}"
-                        )
+                        trailer_url = f"https://www.youtube.com/watch?v={v.get('key')}"
                         break
     except Exception:
         pass
@@ -119,12 +119,8 @@ def carregar_catalogo():
                 filmes.append(
                     {
                         "id": movie_id,
-                        "titulo": item.get(
-                            "title", item.get("name", "Sem Título")
-                        ),
-                        "lancamento": item.get(
-                            "release_date", item.get("first_air_date", "--")
-                        ),
+                        "titulo": item.get("title", item.get("name", "Sem Título")),
+                        "lancamento": item.get("release_date", item.get("first_air_date", "--")),
                         "poster": (
                             f"https://image.tmdb.org/t/p/w500{poster_path}"
                             if poster_path
@@ -148,9 +144,7 @@ def carregar_catalogo():
 catalogo = carregar_catalogo()
 
 if not catalogo:
-    st.error(
-        "Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão."
-    )
+    st.error("Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão.")
 else:
     # --- GERENCIAMENTO DE ESTADO DE NAVEGAÇÃO ---
     if "filme_selecionado" not in st.session_state:
@@ -191,29 +185,18 @@ else:
             unsafe_allow_html=True,
         )
 
-        # Layout detalhado dividindo colunas (Pôster e Informações)
+        # Layout detalhado dividindo colunas
         with st.container():
-            st.markdown(
-                f'<div class="tmdb-details-hero">', unsafe_allow_html=True
-            )
+            st.markdown('<div class="tmdb-details-hero">', unsafe_allow_html=True)
             col_poster, col_info = st.columns([1, 2.5])
 
             with col_poster:
                 st.image(filme["poster"], use_column_width=True)
 
             with col_info:
-                st.markdown(
-                    f"<h1 style='color: white; margin-bottom: 0;'>{filme['titulo']}</h1>",
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    f"<p style='color: #cccccc; font-size: 16px;'>Lançamento: {filme['lancamento']}</p>",
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    f"<h3 style='color: #01b4e4; margin-top: 10px;'>⭐ Avaliação dos usuários: {filme['voto']}%</h3>",
-                    unsafe_allow_html=True,
-                )
+                st.markdown(f"<h1 style='color: white; margin-bottom: 0;'>{filme['titulo']}</h1>", unsafe_allow_html=True)
+                st.markdown(f"<p style='color: #cccccc; font-size: 16px;'>Lançamento: {filme['lancamento']}</p>", unsafe_allow_html=True)
+                st.markdown(f"<h3 style='color: #01b4e4; margin-top: 10px;'>⭐ Avaliação: {filme['voto']}%</h3>", unsafe_allow_html=True)
 
                 if trailer:
                     st.markdown(
@@ -221,40 +204,23 @@ else:
                         unsafe_allow_html=True,
                     )
 
-                st.markdown(
-                    "<h3 style='margin-top: 15px;'>Sinopse</h3>",
-                    unsafe_allow_html=True,
-                )
-                st.write(
-                    filme["visao"]
-                    if filme["visao"]
-                    else "Sinopse não disponível em português."
-                )
+                st.markdown("<h3 style='margin-top: 15px;'>Sinopse</h3>", unsafe_allow_html=True)
+                st.write(filme["visao"] if filme["visao"] else "Sinopse não disponível em português.")
 
             st.markdown("</div>", unsafe_allow_html=True)
 
         # Seção de Elenco
         if elenco:
-            st.markdown(
-                "<h3 style='color: white; margin-top: 30px; margin-bottom: 20px;'>Elenco Principal</h3>",
-                unsafe_allow_html=True,
-            )
+            st.markdown("<h3 style='color: white; margin-top: 30px; margin-bottom: 20px;'>Elenco Principal</h3>", unsafe_allow_html=True)
             cols_elenco = st.columns(len(elenco) if len(elenco) <= 6 else 6)
             for idx, ator in enumerate(elenco):
                 with cols_elenco[idx]:
                     st.image(ator["foto"], use_column_width=True)
-                    st.markdown(
-                        f"<div style='font-weight: 700; font-size: 13px; color: white;'>{ator['nome']}</div>",
-                        unsafe_allow_html=True,
-                    )
-                    st.markdown(
-                        f"<div style='font-size: 12px; color: #aaaaaa;'>{ator['personagem']}</div>",
-                        unsafe_allow_html=True,
-                    )
+                    st.markdown(f"<div style='font-weight: 700; font-size: 13px; color: white;'>{ator['nome']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='font-size: 12px; color: #aaaaaa;'>{ator['personagem']}</div>", unsafe_allow_html=True)
 
     else:
         # --- TELA PRINCIPAL (HOME) ---
-        # Navbar Superior com Logo
         st.markdown(
             """
             <div class="top-navbar">
@@ -265,9 +231,7 @@ else:
         )
 
         # Hero Banner Dinâmico de Boas-Vindas
-        backdrops_disponiveis = [
-            item["backdrop"] for item in catalogo if item.get("backdrop")
-        ]
+        backdrops_disponiveis = [item["backdrop"] for item in catalogo if item.get("backdrop")]
         banner_img = (
             random.choice(backdrops_disponiveis)
             if backdrops_disponiveis
@@ -305,17 +269,10 @@ else:
 
         filmes_exibidos = catalogo
         if pesquisa:
-            filmes_exibidos = [
-                f
-                for f in catalogo
-                if pesquisa.lower() in f["titulo"].lower()
-            ]
+            filmes_exibidos = [f for f in catalogo if pesquisa.lower() in f["titulo"].lower()]
 
         # Seção de Filmes em Destaque
-        st.markdown(
-            "<h3 style='color: #ffffff; margin-top: 20px; margin-bottom: 20px;'>Filmes em Destaque</h3>",
-            unsafe_allow_html=True,
-        )
+        st.markdown("<h3 style='color: #ffffff; margin-top: 20px; margin-bottom: 20px;'>Filmes em Destaque</h3>", unsafe_allow_html=True)
 
         if not filmes_exibidos:
             st.warning("Nenhum filme encontrado com esse termo.")
@@ -325,4 +282,18 @@ else:
                 cols = st.columns(cols_por_linha)
                 for j in range(cols_por_linha):
                     if i + j < len(filmes_exibidos):
-                    ...  # (continuação da grade)
+                        filme = filmes_exibidos[i + j]
+                        with cols[j]:
+                            st.image(filme["poster"], use_column_width=True)
+                            st.markdown(
+                                f"""
+                                <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
+                                <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
+                                <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+                            # Botão do Streamlit para abrir a página de detalhes do filme
+                            if st.button("Ver Detalhes", key=f"btn_{filme['id']}"):
+                                st.session_state.filme_selecionado = filme
+                                st.rerun()
