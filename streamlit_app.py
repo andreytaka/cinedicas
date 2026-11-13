@@ -14,7 +14,7 @@ st.set_page_config(
 # Chave da API do TMDb integrada
 API_KEY = "81b9f974da505f74247634bd774323b9"
 
-# --- ESTILIZAÇÃO CSS (PADRÃO TMDB) ---
+# --- ESTILIZAÇÃO CSS (PADRÃO TMDB & BOTÕES VISÍVEIS) ---
 st.markdown(
     """
     <style>
@@ -43,13 +43,28 @@ st.markdown(
             text-decoration: none;
             letter-spacing: 1px;
         }
+        
+        /* Estilização para forçar o botão do Streamlit a ficar com texto visível e chamativo */
+        div.stButton > button {
+            background-color: #01b4e4 !important;
+            color: white !important;
+            font-weight: bold !important;
+            width: 100% !important;
+            border-radius: 6px !important;
+            border: none !important;
+            padding: 8px 12px !important;
+        }
+        div.stButton > button:hover {
+            background-color: #0096c7 !important;
+            color: white !important;
+        }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 
-# --- FUNÇÃO PARA BUSCAR DETALHES COMPLETOS DO FILME (ELENCO E TRAILER) ---
+# --- FUNÇÃO PARA BUSCAR DETALHES, TRAILER E STREAMINGS ---
 def buscar_detalhes_filme(movie_id):
     # Buscar Elenco
     creditos_url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}&language=pt-BR"
@@ -58,7 +73,7 @@ def buscar_detalhes_filme(movie_id):
         resp = requests.get(creditos_url)
         if resp.status_code == 200:
             cast = resp.json().get("cast", [])
-            for ator in cast[:6]:  # Pega os 6 principais atores
+            for ator in cast[:6]:
                 elenco.append(
                     {
                         "nome": ator.get("name"),
@@ -73,6 +88,35 @@ def buscar_detalhes_filme(movie_id):
     except Exception:
         pass
 
+    # Buscar Provedores de Streaming (Onde Assistir no Brasil - BR)
+    provedores = []
+    watch_url = f"https://api.themoviedb.org/3/movie/{movie_id}/watch/providers?api_key={API_KEY}"
+    try:
+        resp_w = requests.get(watch_url)
+        if resp_w.status_code == 200:
+            results = resp_w.json().get("results", {})
+            br_data = results.get("BR", {})
+            # Junta opções de streaming (flatrate), aluguel (rent) e compra (buy)
+            for tipo in ["flatrate", "rent", "buy"]:
+                for p in br_data.get(tipo, []):
+                    nome_provedor = p.get("provider_name")
+                    logo_path = p.get("logo_path")
+                    if nome_provedor and not any(
+                        item["nome"] == nome_provedor for item in provedores
+                    ):
+                        provedores.append(
+                            {
+                                "nome": nome_provedor,
+                                "logo": (
+                                    f"https://image.tmdb.org/t/p/w92{logo_path}"
+                                    if logo_path
+                                    else None
+                                ),
+                            }
+                        )
+    except Exception:
+        pass
+
     # Buscar Trailer
     videos_url = f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}&language=pt-BR"
     trailer_url = None
@@ -84,8 +128,6 @@ def buscar_detalhes_filme(movie_id):
                 if v.get("site") == "YouTube" and v.get("type") == "Trailer":
                     trailer_url = f"https://www.youtube.com/watch?v={v.get('key')}"
                     break
-        
-        # Se não achar em português, tenta em inglês
         if not trailer_url:
             resp_en = requests.get(
                 f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}&language=en-US"
@@ -94,15 +136,17 @@ def buscar_detalhes_filme(movie_id):
                 videos_en = resp_en.json().get("results", [])
                 for v in videos_en:
                     if v.get("site") == "YouTube" and v.get("type") == "Trailer":
-                        trailer_url = f"https://www.youtube.com/watch?v={v.get('key')}"
+                        trailer_url = (
+                            f"https://www.youtube.com/watch?v={v.get('key')}"
+                        )
                         break
     except Exception:
         pass
 
-    return elenco, trailer_url
+    return elenco, trailer_url, provedores
 
 
-# --- FUNÇÃO PARA BUSCAR CATÁLOGO DE TENDÊNCIAS ---
+# --- FUNÇÃO PARA BUSCAR CATÁLOGO ---
 @st.cache_data
 def carregar_catalogo():
     url = f"https://api.themoviedb.org/3/trending/movie/week?api_key={API_KEY}&language=pt-BR"
@@ -119,8 +163,12 @@ def carregar_catalogo():
                 filmes.append(
                     {
                         "id": movie_id,
-                        "titulo": item.get("title", item.get("name", "Sem Título")),
-                        "lancamento": item.get("release_date", item.get("first_air_date", "--")),
+                        "titulo": item.get(
+                            "title", item.get("name", "Sem Título")
+                        ),
+                        "lancamento": item.get(
+                            "release_date", item.get("first_air_date", "--")
+                        ),
                         "poster": (
                             f"https://image.tmdb.org/t/p/w500{poster_path}"
                             if poster_path
@@ -144,29 +192,28 @@ def carregar_catalogo():
 catalogo = carregar_catalogo()
 
 if not catalogo:
-    st.error("Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão.")
+    st.error(
+        "Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão."
+    )
 else:
-    # --- GERENCIAMENTO DE ESTADO DE NAVEGAÇÃO ---
     if "filme_selecionado" not in st.session_state:
         st.session_state.filme_selecionado = None
 
-    # --- TELA DE DETALHES DO FILME (ESTILO TMDB) ---
+    # --- TELA DE DETALHES ---
     if st.session_state.filme_selecionado is not None:
         filme = st.session_state.filme_selecionado
 
-        # Botão para voltar à página principal
         if st.button("⬅ Voltar para Início"):
             st.session_state.filme_selecionado = None
             st.rerun()
 
-        elenco, trailer = buscar_detalhes_filme(filme["id"])
+        elenco, trailer, provedores = buscar_detalhes_filme(filme["id"])
         bg_img = (
             filme["backdrop"]
             if filme["backdrop"]
             else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
         )
 
-        # Banner estilo TMDb com fundo do filme
         st.markdown(
             f"""
             <style>
@@ -185,18 +232,28 @@ else:
             unsafe_allow_html=True,
         )
 
-        # Layout detalhado dividindo colunas
         with st.container():
-            st.markdown('<div class="tmdb-details-hero">', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="tmdb-details-hero">', unsafe_allow_html=True
+            )
             col_poster, col_info = st.columns([1, 2.5])
 
             with col_poster:
                 st.image(filme["poster"], use_column_width=True)
 
             with col_info:
-                st.markdown(f"<h1 style='color: white; margin-bottom: 0;'>{filme['titulo']}</h1>", unsafe_allow_html=True)
-                st.markdown(f"<p style='color: #cccccc; font-size: 16px;'>Lançamento: {filme['lancamento']}</p>", unsafe_allow_html=True)
-                st.markdown(f"<h3 style='color: #01b4e4; margin-top: 10px;'>⭐ Avaliação: {filme['voto']}%</h3>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<h1 style='color: white; margin-bottom: 0;'>{filme['titulo']}</h1>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"<p style='color: #cccccc; font-size: 16px;'>Lançamento: {filme['lancamento']}</p>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"<h3 style='color: #01b4e4; margin-top: 10px;'>⭐ Avaliação: {filme['voto']}%</h3>",
+                    unsafe_allow_html=True,
+                )
 
                 if trailer:
                     st.markdown(
@@ -204,20 +261,59 @@ else:
                         unsafe_allow_html=True,
                     )
 
-                st.markdown("<h3 style='margin-top: 15px;'>Sinopse</h3>", unsafe_allow_html=True)
-                st.write(filme["visao"] if filme["visao"] else "Sinopse não disponível em português.")
+                # Onde Assistir (Streamings disponíveis)
+                st.markdown(
+                    "<h3 style='margin-top: 15px;'>Onde Assistir</h3>",
+                    unsafe_allow_html=True,
+                )
+                if provedores:
+                    cols_prov = st.columns(
+                        len(provedores) if len(provedores) <= 6 else 6
+                    )
+                    for idx, prov in enumerate(provedores[:6]):
+                        with cols_prov[idx]:
+                            if prov["logo"]:
+                                st.image(prov["logo"], width=50)
+                            st.markdown(
+                                f"<div style='font-size: 12px; color: #ffffff;'>{prov['nome']}</div>",
+                                unsafe_allow_html=True,
+                            )
+                else:
+                    st.markdown(
+                        "<p style='color: #aaaaaa;'>Nenhum serviço de streaming disponível no momento para este título no Brasil.</p>",
+                        unsafe_allow_html=True,
+                    )
+
+                st.markdown(
+                    "<h3 style='margin-top: 20px;'>Sinopse</h3>",
+                    unsafe_allow_html=True,
+                )
+                st.write(
+                    filme["visao"]
+                    if filme["visao"]
+                    else "Sinopse não disponível em português."
+                )
 
             st.markdown("</div>", unsafe_allow_html=True)
 
         # Seção de Elenco
         if elenco:
-            st.markdown("<h3 style='color: white; margin-top: 30px; margin-bottom: 20px;'>Elenco Principal</h3>", unsafe_allow_html=True)
+            st.markdown(
+                "<h3 style='color: white; margin-top: 30px; margin-bottom: 20px;'>Elenco Principal</h3>",
+                unsafe_allow_html=True,
+            )
             cols_elenco = st.columns(len(elenco) if len(elenco) <= 6 else 6)
             for idx, ator in enumerate(elenco):
                 with cols_elenco[idx]:
                     st.image(ator["foto"], use_column_width=True)
-                    st.markdown(f"<div style='font-weight: 700; font-size: 13px; color: white;'>{ator['nome']}</div>", unsafe_allow_html=True)
-                    st.markdown(f"<div style='font-size: 12px; color: #aaaaaa;'>{ator['personagem']}</div>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<div style='font-weight: 700; font-size: 13px; color: white;'>{ator['nome']}</div>",
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f"<div style='font-size: 12px; color: #aaaaaa;'>{ator['personagem']}</div>",
+                        unsafe_allow_html=True,
+                    )
 
     else:
         # --- TELA PRINCIPAL (HOME) ---
@@ -230,8 +326,9 @@ else:
             unsafe_allow_html=True,
         )
 
-        # Hero Banner Dinâmico de Boas-Vindas
-        backdrops_disponiveis = [item["backdrop"] for item in catalogo if item.get("backdrop")]
+        backdrops_disponiveis = [
+            item["backdrop"] for item in catalogo if item.get("backdrop")
+        ]
         banner_img = (
             random.choice(backdrops_disponiveis)
             if backdrops_disponiveis
@@ -260,7 +357,6 @@ else:
             unsafe_allow_html=True,
         )
 
-        # Barra de Pesquisa
         pesquisa = st.text_input(
             "🔍 Pesquisar...",
             placeholder="Busque por um filme...",
@@ -269,10 +365,16 @@ else:
 
         filmes_exibidos = catalogo
         if pesquisa:
-            filmes_exibidos = [f for f in catalogo if pesquisa.lower() in f["titulo"].lower()]
+            filmes_exibidos = [
+                f
+                for f in catalogo
+                if pesquisa.lower() in f["titulo"].lower()
+            ]
 
-        # Seção de Filmes em Destaque
-        st.markdown("<h3 style='color: #ffffff; margin-top: 20px; margin-bottom: 20px;'>Filmes em Destaque</h3>", unsafe_allow_html=True)
+        st.markdown(
+            "<h3 style='color: #ffffff; margin-top: 20px; margin-bottom: 20px;'>Filmes em Destaque</h3>",
+            unsafe_allow_html=True,
+        )
 
         if not filmes_exibidos:
             st.warning("Nenhum filme encontrado com esse termo.")
@@ -293,7 +395,7 @@ else:
                                 """,
                                 unsafe_allow_html=True,
                             )
-                            # Botão do Streamlit para abrir a página de detalhes do filme
+                            # Botão estilizado para abrir os detalhes
                             if st.button("Ver Detalhes", key=f"btn_{filme['id']}"):
                                 st.session_state.filme_selecionado = filme
                                 st.rerun()
