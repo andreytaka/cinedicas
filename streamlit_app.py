@@ -26,19 +26,20 @@ st.markdown(
         footer {visibility: hidden;}
         header {visibility: hidden;}
         
+        /* Remover bordas feias de botões e estilizar como link de imagem */
         div.stButton > button {
-            background-color: #01b4e4 !important;
-            color: white !important;
-            font-weight: bold !important;
-            width: 100% !important;
-            border-radius: 6px !important;
+            background-color: transparent !important;
+            color: #ffffff !important;
             border: none !important;
-            padding: 6px 10px !important;
-            font-size: 13px !important;
+            padding: 0px !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            text-align: left !important;
+            box-shadow: none !important;
         }
         div.stButton > button:hover {
-            background-color: #0096c7 !important;
-            color: white !important;
+            color: #01b4e4 !important;
+            background-color: transparent !important;
         }
         
         .tmdb-title {
@@ -449,18 +450,21 @@ else:
                 if i + j < len(lista_cat):
                     item = lista_cat[i + j]
                     with cols[j]:
+                        if st.button("", key=f"img_cat_{item['id']}", help="Clique para ver detalhes"):
+                            st.session_state.filme_id_selecionado = item["id"]
+                            st.rerun()
+                        # Exibimos a imagem do pôster integrada com o título clicável
                         st.image(item["poster"], use_column_width=True)
+                        if st.button(item['titulo'], key=f"title_cat_{item['id']}"):
+                            st.session_state.filme_id_selecionado = item["id"]
+                            st.rerun()
                         st.markdown(
                             f"""
-                            <div style="font-weight: 700; font-size: 13px; margin-top: 5px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{item['titulo']}</div>
                             <div style="font-size: 11px; color: #aaaaaa; margin-bottom: 3px;">{item['lancamento']}</div>
                             <div style="font-size: 11px; color: #01b4e4; font-weight: bold; margin-bottom: 8px;">⭐ {item['voto']}%</div>
                             """,
                             unsafe_allow_html=True,
                         )
-                        if st.button("Ver", key=f"cat_{item['id']}"):
-                            st.session_state.filme_id_selecionado = item["id"]
-                            st.rerun()
     else:
         tendencias_hoje = carregar_lista("trending/movie/day")
         tendencias_semana = carregar_lista("trending/movie/week")
@@ -559,19 +563,34 @@ else:
                 for idx, filme in enumerate(resultados):
                     with cols[idx % 6]:
                         st.image(filme["poster"], use_column_width=True)
+                        if st.button(filme['titulo'], key=f"title_pesq_{filme['id']}"):
+                            st.session_state.filme_id_selecionado = filme["id"]
+                            st.rerun()
                         st.markdown(
                             f"""
-                            <div style="font-weight: 700; font-size: 13px; margin-top: 5px; color: #ffffff;">{filme['titulo']}</div>
-                            <div style="font-size: 11px; color: #01b4e4; font-weight: bold;">⭐ {filme['voto']}%</div>
+                            <div style="font-size: 11px; color: #01b4e4; font-weight: bold; margin-bottom: 8px;">⭐ {filme['voto']}%</div>
                             """,
                             unsafe_allow_html=True,
                         )
-                        if st.button("Ver", key=f"pesq_{filme['id']}"):
-                            st.session_state.filme_id_selecionado = filme["id"]
-                            st.rerun()
             else:
                 st.warning("Nenhum filme encontrado.")
         else:
+            # --- FUNÇÃO AUXILIAR PARA RENDERIZAR OS CARDS CLICÁVEIS ---
+            def exibir_card_filme(filme, prefixo_chave):
+                # Imagem do pôster exibida diretamente na coluna
+                st.image(filme["poster"], use_column_width=True)
+                # Título clicável que substitui o botão "Ver"
+                if st.button(filme['titulo'], key=f"{prefixo_chave}_title_{filme['id']}"):
+                    st.session_state.filme_id_selecionado = filme["id"]
+                    st.rerun()
+                st.markdown(
+                    f"""
+                    <div style="font-size: 11px; color: #aaaaaa; margin-bottom: 3px;">{filme['lancamento']}</div>
+                    <div style="font-size: 11px; color: #01b4e4; font-weight: bold; margin-bottom: 8px;">⭐ {filme['voto']}%</div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
             # --- SEÇÃO 1: TENDÊNCIAS ---
             c_titulo1, c_radio1 = st.columns([1.5, 4])
             with c_titulo1:
@@ -594,18 +613,7 @@ else:
             cols_tend = st.columns(6)
             for idx, filme in enumerate(filmes_tend[:6]):
                 with cols_tend[idx]:
-                    st.image(filme["poster"], use_column_width=True)
-                    st.markdown(
-                        f"""
-                        <div style="font-weight: 700; font-size: 13px; margin-top: 5px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
-                        <div style="font-size: 11px; color: #aaaaaa; margin-bottom: 3px;">{filme['lancamento']}</div>
-                        <div style="font-size: 11px; color: #01b4e4; font-weight: bold; margin-bottom: 8px;">⭐ {filme['voto']}%</div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    if st.button("Ver", key=f"home_tend_{filme['id']}"):
-                        st.session_state.filme_id_selecionado = filme["id"]
-                        st.rerun()
+                    exibir_card_filme(filme, "tend")
 
             # --- SEÇÃO 2: OS MAIS POPULARES ---
             c_titulo2, c_radio2 = st.columns([2, 4])
@@ -631,18 +639,7 @@ else:
             cols_pop = st.columns(6)
             for idx, filme in enumerate(filmes_pop[:6]):
                 with cols_pop[idx]:
-                    st.image(filme["poster"], use_column_width=True)
-                    st.markdown(
-                        f"""
-                        <div style="font-weight: 700; font-size: 13px; margin-top: 5px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
-                        <div style="font-size: 11px; color: #aaaaaa; margin-bottom: 3px;">{filme['lancamento']}</div>
-                        <div style="font-size: 11px; color: #01b4e4; font-weight: bold; margin-bottom: 8px;">⭐ {filme['voto']}%</div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    if st.button("Ver", key=f"home_pop_{filme['id']}"):
-                        st.session_state.filme_id_selecionado = filme["id"]
-                        st.rerun()
+                    exibir_card_filme(filme, "pop")
 
             # --- SEÇÃO 3: GRÁTIS PARA ASSISTIR ---
             c_titulo3, c_radio3 = st.columns([2.2, 4])
@@ -663,15 +660,4 @@ else:
             cols_gratis = st.columns(6)
             for idx, filme in enumerate(gratis_assistir[:6]):
                 with cols_gratis[idx]:
-                    st.image(filme["poster"], use_column_width=True)
-                    st.markdown(
-                        f"""
-                        <div style="font-weight: 700; font-size: 13px; margin-top: 5px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
-                        <div style="font-size: 11px; color: #aaaaaa; margin-bottom: 3px;">{filme['lancamento']}</div>
-                        <div style="font-size: 11px; color: #01b4e4; font-weight: bold; margin-bottom: 8px;">⭐ {filme['voto']}%</div>
-                        """,
-            unsafe_allow_html=True,
-                    )
-                    if st.button("Ver", key=f"home_gratis_{filme['id']}"):
-                        st.session_state.filme_id_selecionado = filme["id"]
-                        st.rerun()
+                    exibir_card_filme(filme, "gratis")
