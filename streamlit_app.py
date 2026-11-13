@@ -316,4 +316,203 @@ if st.session_state.filme_id_selecionado is not None:
                 if backdrop_path
                 else None
             ),
-            "voto": round(item.get("vote_average", 0) *
+            "voto": round(item.get("vote_average", 0) * 10),
+            "visao": item.get("overview", "Sem sinopse disponível."),
+        }
+
+    if filme_atual:
+        if st.button("⬅ Voltar para a Lista", key="voltar_lista_btn"):
+            st.session_state.filme_id_selecionado = None
+            st.rerun()
+
+        elenco, trailer, provedores = buscar_detalhes_filme(filme_atual["id"])
+        bg_img = (
+            filme_atual["backdrop"]
+            if filme_atual["backdrop"]
+            else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
+        )
+
+        st.markdown(
+            f"""
+            <style>
+            .tmdb-details-hero {{
+                background: linear-gradient(to right, rgba(3, 37, 65, 0.9) 0%, rgba(3, 37, 65, 0.8) 100%), url('{bg_img}');
+                background-size: cover;
+                background-position: center;
+                padding: 40px;
+                border-radius: 10px;
+                color: white;
+                margin-bottom: 30px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        with st.container():
+            st.markdown(f'<div class="tmdb-details-hero">', unsafe_allow_html=True)
+            col_poster, col_info = st.columns([1, 2.5])
+
+            with col_poster:
+                st.image(filme_atual["poster"], use_column_width=True)
+
+            with col_info:
+                st.markdown(
+                    f"<h1 style='color: white; margin-bottom: 0;'>{filme_atual['titulo']}</h1>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"<p style='color: #cccccc; font-size: 16px;'>Lançamento: {filme_atual['lancamento']}</p>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"<h3 style='color: #01b4e4; margin-top: 10px;'>⭐ Avaliação: {filme_atual['voto']}%</h3>",
+                    unsafe_allow_html=True,
+                )
+
+                if trailer:
+                    st.markdown(
+                        f'<a href="{trailer}" target="_blank"><button style="background-color:#01b4e4; color:white; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer; margin-top:10px; margin-bottom:15px;">▶ Reproduzir Trailer</button></a>',
+                        unsafe_allow_html=True,
+                    )
+
+                st.markdown(
+                    "<h3 style='margin-top: 15px;'>Onde Assistir</h3>",
+                    unsafe_allow_html=True,
+                )
+                if provedores:
+                    cols_prov = st.columns(
+                        len(provedores) if len(provedores) <= 6 else 6
+                    )
+                    for idx, prov in enumerate(provedores[:6]):
+                        with cols_prov[idx]:
+                            if prov["logo"]:
+                                st.image(prov["logo"], width=50)
+                            st.markdown(
+                                f"<div style='font-size: 12px; color: #ffffff;'>{prov['nome']}</div>",
+                                unsafe_allow_html=True,
+                            )
+                else:
+                    st.markdown(
+                        "<p style='color: #aaaaaa;'>Nenhum serviço de streaming disponível no momento para este título no Brasil.</p>",
+                        unsafe_allow_html=True,
+                    )
+
+                st.markdown(
+                    "<h3 style='margin-top: 20px;'>Sinopse</h3>",
+                    unsafe_allow_html=True,
+                )
+                st.write(
+                    filme_atual["visao"]
+                    if filme_atual["visao"]
+                    else "Sinopse não disponível em português."
+                )
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        if elenco:
+            st.markdown(
+                "<h3 style='color: white; margin-top: 30px; margin-bottom: 20px;'>Elenco Principal</h3>",
+                unsafe_allow_html=True,
+            )
+            cols_elenco = st.columns(len(elenco) if len(elenco) <= 6 else 6)
+            for idx, ator in enumerate(elenco):
+                with cols_elenco[idx]:
+                    st.image(ator["foto"], use_column_width=True)
+                    st.markdown(
+                        f"<div style='font-weight: 700; font-size: 13px; color: white;'>{ator['nome']}</div>",
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f"<div style='font-size: 12px; color: #aaaaaa;'>{ator['personagem']}</div>",
+                        unsafe_allow_html=True,
+                    )
+    else:
+        st.error("Erro ao carregar os detalhes.")
+        if st.button("Voltar"):
+            st.session_state.filme_id_selecionado = None
+            st.rerun()
+
+else:
+    if not catalogo:
+        st.error(
+            "Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão."
+        )
+    else:
+        backdrops_disponiveis = [
+            item["backdrop"] for item in catalogo if item.get("backdrop")
+        ]
+        banner_img = (
+            random.choice(backdrops_disponiveis)
+            if backdrops_disponiveis
+            else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
+        )
+
+        st.markdown(
+            f"""
+            <style>
+            .hero-container {{
+                background: linear-gradient(rgba(3, 37, 65, 0.8), rgba(3, 37, 65, 0.8)), url('{banner_img}');
+                background-size: cover;
+                background-position: center;
+                padding: 50px 40px;
+                border-radius: 8px;
+                color: #ffffff;
+                margin-bottom: 30px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            }}
+            </style>
+            <div class="hero-container">
+                <h1 style="font-size: 40px; font-weight: 800; margin-bottom: 5px; color: #ffffff;">Bem-vindo(a).</h1>
+                <p style="font-size: 20px; font-weight: 600; margin-bottom: 25px; color: #ffffff;">Milhões de Filmes, Séries e Pessoas para Descobrir. Explore já.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        pesquisa = st.text_input(
+            "🔍 Pesquisar...",
+            placeholder="Busque por um filme...",
+            label_visibility="collapsed",
+        )
+
+        filmes_exibidos = catalogo
+        if pesquisa:
+            filmes_exibidos = [
+                f
+                for f in catalogo
+                if pesquisa.lower() in f["titulo"].lower()
+            ]
+
+        st.markdown(
+            f"<h3 style='color: #ffffff; margin-top: 20px; margin-bottom: 20px;'>{titulo_secao}</h3>",
+            unsafe_allow_html=True,
+        )
+
+        if not filmes_exibidos:
+            st.warning("Nenhum item encontrado com esse termo.")
+        else:
+            cols_por_linha = 4
+            for i in range(0, len(filmes_exibidos), cols_por_linha):
+                cols = st.columns(cols_por_linha)
+                for j in range(cols_por_linha):
+                    if i + j < len(filmes_exibidos):
+                        filme = filmes_exibidos[i + j]
+                        with cols[j]:
+                            st.image(filme["poster"], use_column_width=True)
+                            st.markdown(
+                                f"""
+                                <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
+                                <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
+                                <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+                            if st.button(
+                                "Ver Detalhes", key=f"det_card_{filme['id']}"
+                            ):
+                                st.session_state.filme_id_selecionado = filme[
+                                    "id"
+                                ]
+                                st.rerun()
