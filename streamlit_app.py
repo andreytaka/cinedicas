@@ -26,18 +26,6 @@ st.markdown(
         footer {visibility: hidden;}
         header {visibility: hidden;}
         
-        /* Navbar Superior */
-        .top-navbar {
-            background-color: #032541;
-            padding: 10px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid #0d253f;
-            margin-bottom: 20px;
-        }
-        
-        /* Botões Estilizados */
         div.stButton > button {
             background-color: #01b4e4 !important;
             color: white !important;
@@ -57,7 +45,7 @@ st.markdown(
 )
 
 
-# --- FUNÇÃO PARA BUSCAR DETALHES, TRAILER E STREAMINGS ---
+# --- FUNÇÕES DE BUSCA DA API ---
 def buscar_detalhes_filme(movie_id):
     creditos_url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}&language=pt-BR"
     elenco = []
@@ -135,7 +123,6 @@ def buscar_detalhes_filme(movie_id):
     return elenco, trailer_url, provedores
 
 
-# --- FUNÇÃO PARA BUSCAR CATÁLOGO ---
 @st.cache_data
 def carregar_catalogo(endpoint="trending/movie/week"):
     url = f"https://api.themoviedb.org/3/{endpoint}?api_key={API_KEY}&language=pt-BR"
@@ -148,7 +135,6 @@ def carregar_catalogo(endpoint="trending/movie/week"):
                 movie_id = item.get("id")
                 poster_path = item.get("poster_path")
                 backdrop_path = item.get("backdrop_path")
-
                 filmes.append(
                     {
                         "id": movie_id,
@@ -178,59 +164,71 @@ def carregar_catalogo(endpoint="trending/movie/week"):
     return []
 
 
-# --- GERENCIAMENTO DE ESTADO DE NAVEGAÇÃO ---
+# --- GERENCIAMENTO DE ESTADO ---
 if "filme_id_selecionado" not in st.session_state:
     st.session_state.filme_id_selecionado = None
 
 if "filtro_categoria" not in st.session_state:
     st.session_state.filtro_categoria = "Tendências da Semana"
 
-# --- NAVBAR SUPERIOR ESTILO TMDB (MENUS SUSPENSOS) ---
-col_logo, col_filmes, col_series, col_pessoas, col_awards, col_mais = st.columns(
+
+# --- CALLBACKS PARA MUDANÇA IMEDIATA DE CATEGORIA ---
+def mudar_filmes():
+    val = st.session_state.menu_filmes_key
+    if val != "Filmes":
+        st.session_state.filtro_categoria = val
+        st.session_state.filme_id_selecionado = None
+
+
+def mudar_series():
+    val = st.session_state.menu_series_key
+    if val != "Séries":
+        st.session_state.filtro_categoria = val
+        st.session_state.filme_id_selecionado = None
+
+
+# --- NAVBAR SUPERIOR ESTILO TMDB ---
+col_logo, col_filmes, col_series, col_pes, col_aw, col_mais = st.columns(
     [1.5, 1.2, 1.2, 1.2, 1.2, 1.2]
 )
 
 with col_logo:
-    if st.button("CineDicas 🎬", key="logo_home"):
+    if st.button("CineDicas 🎬", key="logo_home_btn"):
         st.session_state.filme_id_selecionado = None
         st.session_state.filtro_categoria = "Tendências da Semana"
         st.rerun()
 
 with col_filmes:
-    filmes_op = st.selectbox(
+    st.selectbox(
         "Filmes",
         [
-            "Filmes (Menu)",
+            "Filmes",
             "Tendências da Semana",
             "Populares",
             "Em Cartaz",
             "Próximas Estreias",
             "Mais Bem Avaliados",
         ],
+        key="menu_filmes_key",
+        on_change=mudar_filmes,
         label_visibility="collapsed",
     )
-    if filmes_op != "Filmes (Menu)":
-        st.session_state.filtro_categoria = filmes_op
-        st.session_state.filme_id_selecionado = None
-        st.rerun()
 
 with col_series:
-    series_op = st.selectbox(
+    st.selectbox(
         "Séries",
-        ["Séries (Menu)", "Séries Populares", "Séries Bem Avaliadas"],
+        ["Séries", "Séries Populares", "Séries Bem Avaliadas"],
+        key="menu_series_key",
+        on_change=mudar_series,
         label_visibility="collapsed",
     )
-    if series_op != "Séries (Menu)":
-        st.session_state.filtro_categoria = series_op
-        st.session_state.filme_id_selecionado = None
-        st.rerun()
 
-with col_pessoas:
+with col_pes:
     st.selectbox(
         "Pessoas", ["Pessoas", "Artistas Populares"], label_visibility="collapsed"
     )
 
-with col_awards:
+with col_aw:
     st.selectbox(
         "Awards", ["Awards", "Melhores do Ano"], label_visibility="collapsed"
     )
@@ -245,30 +243,30 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Definir qual endpoint carregar com base na escolha do usuário
+# Definir o endpoint correspondente à categoria escolhida
+cat = st.session_state.filtro_categoria
 endpoint_api = "trending/movie/week"
-titulo_secao = st.session_state.filtro_categoria
+titulo_secao = cat
 
-if st.session_state.filtro_categoria == "Tendências da Semana":
+if cat == "Tendências da Semana":
     endpoint_api = "trending/movie/week"
-elif st.session_state.filtro_categoria == "Populares":
+elif cat == "Populares":
     endpoint_api = "movie/popular"
-elif st.session_state.filtro_categoria == "Em Cartaz":
+elif cat == "Em Cartaz":
     endpoint_api = "movie/now_playing"
-elif st.session_state.filtro_categoria == "Próximas Estreias":
+elif cat == "Próximas Estreias":
     endpoint_api = "movie/upcoming"
-elif st.session_state.filtro_categoria == "Mais Bem Avaliados":
+elif cat == "Mais Bem Avaliados":
     endpoint_api = "movie/top_rated"
-elif st.session_state.filtro_categoria == "Séries Populares":
+elif cat == "Séries Populares":
     endpoint_api = "tv/popular"
-elif st.session_state.filtro_categoria == "Séries Bem Avaliadas":
+elif cat == "Séries Bem Avaliadas":
     endpoint_api = "tv/top_rated"
 
 catalogo = carregar_catalogo(endpoint_api)
 
-# --- EXIBIÇÃO DA PÁGINA DE DETALHES OU HOME ---
+# --- EXIBIÇÃO: DETALHES OU HOME ---
 if st.session_state.filme_id_selecionado is not None:
-    # Buscar detalhes do filme selecionado
     url_detalhe = f"https://api.themoviedb.org/3/movie/{st.session_state.filme_id_selecionado}?api_key={API_KEY}&language=pt-BR"
     resp = requests.get(url_detalhe)
     filme_atual = None
@@ -411,7 +409,6 @@ if st.session_state.filme_id_selecionado is not None:
             st.rerun()
 
 else:
-    # --- TELA PRINCIPAL (HOME) ---
     if not catalogo:
         st.error(
             "Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão."
@@ -486,7 +483,6 @@ else:
                                 """,
                                 unsafe_allow_html=True,
                             )
-                            # Botão para abrir os detalhes do filme com cliques garantidos
                             if st.button(
                                 "Ver Detalhes", key=f"det_card_{filme['id']}"
                             ):
