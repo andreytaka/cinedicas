@@ -22,7 +22,6 @@ st.markdown(
             background-color: #032541;
             color: #ffffff;
         }
-        /* Esconder elementos padrão do Streamlit */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
@@ -43,34 +42,6 @@ st.markdown(
             color: #01b4e4;
             text-decoration: none;
             letter-spacing: 1px;
-        }
-        
-        /* Cards de Filmes */
-        .movie-card {
-            background-color: #ffffff;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            color: #000000;
-            transition: transform 0.2s;
-        }
-        .movie-card:hover {
-            transform: scale(1.03);
-        }
-        .movie-title {
-            font-size: 15px;
-            font-weight: 700;
-            margin: 10px 10px 2px 10px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            color: #000000;
-        }
-        .movie-date {
-            font-size: 13px;
-            color: rgba(0,0,0,0.6);
-            margin: 0 10px 15px 10px;
         }
     </style>
     """,
@@ -102,6 +73,7 @@ def carregar_catalogo():
                 backdrop_path = item.get("backdrop_path")
                 filmes.append(
                     {
+                        "id": item.get("id"),
                         "titulo": item.get(
                             "title", item.get("name", "Sem Título")
                         ),
@@ -135,7 +107,7 @@ if not catalogo:
         "Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão."
     )
 else:
-    # --- HERO BANNER DINÂMICO (SORTEIA CAPAS DE FILMES) ---
+    # --- HERO BANNER DINÂMICO DE BOAS-VINDAS ---
     backdrops_disponiveis = [
         item["backdrop"] for item in catalogo if item.get("backdrop")
     ]
@@ -159,15 +131,15 @@ else:
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }}
         .hero-title {{
-            font-size: 42px;
+            font-size: 40px;
             font-weight: 800;
             margin-bottom: 5px;
             color: #ffffff;
         }}
         .hero-subtitle {{
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 600;
-            margin: 0;
+            margin-bottom: 25px;
             color: #ffffff;
         }}
         </style>
@@ -179,24 +151,51 @@ else:
         unsafe_allow_html=True,
     )
 
-    # --- SEÇÃO DE TENDÊNCIAS ---
+    # --- BARRA DE PESQUISA ---
+    pesquisa = st.text_input(
+        "🔍 Pesquisar...",
+        placeholder="Busque por um filme...",
+        label_visibility="collapsed",
+    )
+
+    # Filtrar catálogo se houver pesquisa
+    filmes_exibidos = catalogo
+    if pesquisa:
+        filmes_exibidos = [
+            f
+            for f in catalogo
+            if pesquisa.lower() in f["titulo"].lower()
+        ]
+
+    # --- SEÇÃO DE FILMES ---
     st.markdown(
-        "<h3 style='color: #ffffff; margin-bottom: 20px;'>Tendências da Semana</h3>",
+        "<h3 style='color: #ffffff; margin-top: 20px; margin-bottom: 20px;'>Filmes em Destaque</h3>",
         unsafe_allow_html=True,
     )
 
-    # Exibição em grade de colunas (4 colunas por linha)
-    cols_por_linha = 4
-    for i in range(0, len(catalogo), cols_por_linha):
-        cols = st.columns(cols_por_linha)
-        for j in range(cols_por_linha):
-            if i + j < len(catalogo):
-                filme = catalogo[i + j]
-                with cols[j]:
-                    st.image(filme["poster"], use_column_width=True)
-                    st.markdown(
-                        f"""
-                        <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff;">{filme['titulo']}</div>
+    if not filmes_exibidos:
+        st.warning("Nenhum filme encontrado com esse termo.")
+    else:
+        # Exibição em grade interativa (4 colunas)
+        cols_por_linha = 4
+        for i in range(0, len(filmes_exibidos), cols_por_linha):
+            cols = st.columns(cols_por_linha)
+            for j in range(cols_por_linha):
+                if i + j < len(filmes_exibidos):
+                    filme = filmes_exibidos[i + j]
+                    with cols[j]:
+                        st.image(filme["poster"], use_column_width=True)
+                        st.markdown(
+                            f"""
+                            <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
+                            <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
+                            <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                        # Botão para ver a sinopse / detalhes
+                        with st.expander("Ver Sinopse"):
+                            st.write(filme["visao"])
                         <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 10px;">Lançamento: {filme['lancamento']}</div>
                         """,
                         unsafe_allow_html=True,
