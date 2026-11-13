@@ -26,7 +26,6 @@ st.markdown(
         footer {visibility: hidden;}
         header {visibility: hidden;}
         
-        /* Botões Estilizados */
         div.stButton > button {
             background-color: #01b4e4 !important;
             color: white !important;
@@ -42,14 +41,6 @@ st.markdown(
             color: white !important;
         }
         
-        /* Cabeçalhos de Seções */
-        .tmdb-header {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            margin-top: 30px;
-            margin-bottom: 15px;
-        }
         .tmdb-title {
             font-size: 22px;
             font-weight: 700;
@@ -187,6 +178,9 @@ if "filme_id_selecionado" not in st.session_state:
 
 if "filtro_categoria" not in st.session_state:
     st.session_state.filtro_categoria = "Início"
+
+if "banner_index" not in st.session_state:
+    st.session_state.banner_index = 0
 
 
 # --- CALLBACKS DOS MENUS ---
@@ -475,34 +469,65 @@ else:
         populares_cinema = carregar_lista("movie/now_playing")
         gratis_assistir = carregar_lista("movie/top_rated")
 
-        banner_img = (
-            random.choice(
-                [f["backdrop"] for f in tendencias_semana if f["backdrop"]]
-            )
-            if tendencias_semana
-            else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
-        )
+        # --- CARROSSEL DO BANNER COM SETAS E NOME DO FILME ---
+        destaques = [
+            f for f in tendencias_semana if f.get("backdrop")
+        ] or tendencias_semana
+        if destaques:
+            total_destaques = len(destaques)
+            filme_banner = destaques[st.session_state.banner_index % total_destaques]
+            banner_img = filme_banner["backdrop"] or "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
+            nome_filme_banner = filme_banner["titulo"]
+        else:
+            banner_img = "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
+            nome_filme_banner = "Bem-vindo(a)."
 
         st.markdown(
             f"""
             <style>
             .hero-home {{
-                background: linear-gradient(rgba(3, 37, 65, 0.8), rgba(3, 37, 65, 0.8)), url('{banner_img}');
+                background: linear-gradient(rgba(3, 37, 65, 0.7), rgba(3, 37, 65, 0.85)), url('{banner_img}');
                 background-size: cover;
                 background-position: center;
-                padding: 40px;
+                padding: 45px 30px 30px 30px;
                 border-radius: 8px;
                 color: white;
-                margin-bottom: 20px;
+                margin-bottom: 15px;
+                position: relative;
+            }}
+            .banner-footer {{
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 25px;
+                font-size: 14px;
+                color: #cccccc;
+                font-weight: 600;
             }}
             </style>
             <div class="hero-home">
-                <h1 style="font-size: 38px; font-weight: 800; margin-bottom: 0;">Bem-vindo(a).</h1>
-                <p style="font-size: 18px; font-weight: 600; margin-bottom: 15px;">Milhões de Filmes, Séries e Pessoas para Descobrir. Explore já.</p>
+                <h1 style="font-size: 36px; font-weight: 800; margin-bottom: 0;">Bem-vindo(a).</h1>
+                <p style="font-size: 17px; font-weight: 600; margin-bottom: 15px;">Milhões de Filmes, Séries e Pessoas para Descobrir. Explore já.</p>
+                <div class="banner-footer">
+                    <span>❮</span>
+                    <span style="color: #ffffff; font-weight: bold; letter-spacing: 0.5px;">{nome_filme_banner}</span>
+                    <span>❯</span>
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+
+        # Botões de navegação lateral para as setas do banner
+        col_esq, col_dir = st.columns([1, 1])
+        with col_esq:
+            if st.button("◀ Filme Anterior", key="btn_ant"):
+                st.session_state.banner_index -= 1
+                st.rerun()
+        with col_dir:
+            if st.button("Próximo Filme ▶", key="btn_prox"):
+                st.session_state.banner_index += 1
+                st.rerun()
 
         termo_pesquisa = st.text_input(
             "🔍 Pesquisar...",
@@ -548,7 +573,7 @@ else:
             else:
                 st.warning("Nenhum filme encontrado.")
         else:
-            # --- SEÇÃO 1: TENDÊNCIAS (6 itens por linha, pôsteres menores) ---
+            # --- SEÇÃO 1: TENDÊNCIAS ---
             c_titulo1, c_radio1 = st.columns([1.5, 4])
             with c_titulo1:
                 st.markdown(
@@ -583,7 +608,7 @@ else:
                         st.session_state.filme_id_selecionado = filme["id"]
                         st.rerun()
 
-            # --- SEÇÃO 2: OS MAIS POPULARES (6 itens por linha) ---
+            # --- SEÇÃO 2: OS MAIS POPULARES ---
             c_titulo2, c_radio2 = st.columns([2, 4])
             with c_titulo2:
                 st.markdown(
@@ -620,7 +645,7 @@ else:
                         st.session_state.filme_id_selecionado = filme["id"]
                         st.rerun()
 
-            # --- SEÇÃO 3: GRÁTIS PARA ASSISTIR (6 itens por linha) ---
+            # --- SEÇÃO 3: GRÁTIS PARA ASSISTIR ---
             c_titulo3, c_radio3 = st.columns([2.2, 4])
             with c_titulo3:
                 st.markdown(
