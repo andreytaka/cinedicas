@@ -45,7 +45,7 @@ st.markdown(
 )
 
 
-# --- FUNÇÃO PARA BUSCAR DETALHES, TRAILER E STREAMINGS ---
+# --- FUNÇÕES DE BUSCA DA API ---
 def buscar_detalhes_filme(movie_id):
     creditos_url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}&language=pt-BR"
     elenco = []
@@ -264,7 +264,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- EXIBIÇÃO DA PÁGINA DE DETALHES OU HOME MULTI-SEÇÕES ---
+# --- EXIBIÇÃO DA PÁGINA DE DETALHES OU HOME ---
 if st.session_state.filme_id_selecionado is not None:
     url_detalhe = f"https://api.themoviedb.org/3/movie/{st.session_state.filme_id_selecionado}?api_key={API_KEY}&language=pt-BR"
     resp = requests.get(url_detalhe)
@@ -294,7 +294,7 @@ if st.session_state.filme_id_selecionado is not None:
         }
 
     if filme_atual:
-        if st.button("⬅ Voltar para a Início", key="voltar_lista_btn"):
+        if st.button("⬅ Voltar para o Início", key="voltar_lista_btn"):
             st.session_state.filme_id_selecionado = None
             st.rerun()
 
@@ -403,7 +403,6 @@ if st.session_state.filme_id_selecionado is not None:
                     )
 
 else:
-    # Se o usuário escolheu uma categoria específica pelo menu superior
     cat = st.session_state.filtro_categoria
     if cat != "Início":
         endpoint = "trending/movie/week"
@@ -446,12 +445,10 @@ else:
                             st.session_state.filme_id_selecionado = item["id"]
                             st.rerun()
     else:
-        # --- HOME ESTILO PORTAL TMDB COMPLETO ---
         tendencias = carregar_lista("trending/movie/week")
         populares = carregar_lista("movie/popular")
         em_cartaz = carregar_lista("movie/now_playing")
 
-        # 1. Hero Banner com Barra de Pesquisa
         banner_img = (
             random.choice([f["backdrop"] for f in tendencias if f["backdrop"]])
             if tendencias
@@ -485,7 +482,6 @@ else:
         )
 
         if termo_pesquisa:
-            # Se pesquisar, mostra os resultados filtrados
             todos_filmes = list(
                 {f["id"]: f for f in (tendencias + populares + em_cartaz)}.values()
             )
@@ -516,7 +512,6 @@ else:
             else:
                 st.warning("Nenhum filme encontrado.")
         else:
-            # 2. Seção Tendências
             st.markdown(
                 "<h3 style='color: white; margin-top: 25px; margin-bottom: 15px;'>Tendências da Semana</h3>",
                 unsafe_allow_html=True,
@@ -537,7 +532,6 @@ else:
                         st.session_state.filme_id_selecionado = filme["id"]
                         st.rerun()
 
-            # 3. Seção Em Cartaz
             st.markdown(
                 "<h3 style='color: white; margin-top: 35px; margin-bottom: 15px;'>Em Cartaz nos Cinemas</h3>",
                 unsafe_allow_html=True,
@@ -558,7 +552,6 @@ else:
                         st.session_state.filme_id_selecionado = filme["id"]
                         st.rerun()
 
-            # 4. Seção Populares
             st.markdown(
                 "<h3 style='color: white; margin-top: 35px; margin-bottom: 15px;'>Filmes Populares</h3>",
                 unsafe_allow_html=True,
