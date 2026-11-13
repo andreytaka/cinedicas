@@ -481,18 +481,18 @@ else:
             banner_img = "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
             nome_filme_banner = "Bem-vindo(a)."
 
-        # --- BANNER COM SETAS CLICÁVEIS DENTRO DA IMAGEM ---
+        # --- BANNER COM ALTURA ADEQUADA E ESPAÇO PARA O TEXTO ---
         st.markdown(
             f"""
             <style>
             .hero-home {{
-                background: linear-gradient(rgba(3, 37, 65, 0.7), rgba(3, 37, 65, 0.85)), url('{banner_img}');
+                background: linear-gradient(rgba(3, 37, 65, 0.75), rgba(3, 37, 65, 0.85)), url('{banner_img}');
                 background-size: cover;
                 background-position: center;
-                padding: 40px 20px 20px 20px;
+                padding: 60px 20px 50px 20px;
                 border-radius: 8px;
                 color: white;
-                margin-bottom: 20px;
+                margin-bottom: 25px;
             }}
             </style>
             """,
@@ -502,7 +502,6 @@ else:
         with st.container():
             st.markdown('<div class="hero-home">', unsafe_allow_html=True)
             
-            # Colunas para alinhar a seta esquerda, o texto ao centro e a seta direita dentro do banner
             col_arrow_left, col_text, col_arrow_right = st.columns([0.5, 9, 0.5])
 
             with col_arrow_left:
@@ -514,9 +513,9 @@ else:
                 st.markdown(
                     f"""
                     <div style="text-align: center;">
-                        <h1 style="font-size: 36px; font-weight: 800; margin-bottom: 0;">Bem-vindo(a).</h1>
-                        <p style="font-size: 17px; font-weight: 600; margin-bottom: 20px;">Milhões de Filmes, Séries e Pessoas para Descobrir. Explore já.</p>
-                        <div style="font-size: 15px; color: #ffffff; font-weight: bold; letter-spacing: 0.5px; margin-top: 10px;">{nome_filme_banner}</div>
+                        <h1 style="font-size: 40px; font-weight: 800; margin-bottom: 5px; color: #ffffff;">Bem-vindo(a).</h1>
+                        <p style="font-size: 18px; font-weight: 600; margin-bottom: 30px; color: #ffffff;">Milhões de Filmes, Séries e Pessoas para Descobrir. Explore já.</p>
+                        <div style="font-size: 16px; color: #ffffff; font-weight: bold; letter-spacing: 0.5px; background-color: rgba(0,0,0,0.3); display: inline-block; padding: 6px 16px; border-radius: 20px;">🎬 {nome_filme_banner}</div>
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -671,7 +670,7 @@ else:
                         <div style="font-size: 11px; color: #aaaaaa; margin-bottom: 3px;">{filme['lancamento']}</div>
                         <div style="font-size: 11px; color: #01b4e4; font-weight: bold; margin-bottom: 8px;">⭐ {filme['voto']}%</div>
                         """,
-                        unsafe_allow_html=True,
+            unsafe_allow_html=True,
                     )
                     if st.button("Ver", key=f"home_gratis_{filme['id']}"):
                         st.session_state.filme_id_selecionado = filme["id"]
