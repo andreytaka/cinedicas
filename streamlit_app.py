@@ -14,7 +14,7 @@ st.set_page_config(
 # Chave da API do TMDb integrada
 API_KEY = "81b9f974da505f74247634bd774323b9"
 
-# --- ESTILIZAÇÃO CSS (PADRÃO TMDB HOME) ---
+# --- ESTILIZAÇÃO CSS (PADRÃO TMDB PROFISSIONAL) ---
 st.markdown(
     """
     <style>
@@ -26,6 +26,7 @@ st.markdown(
         footer {visibility: hidden;}
         header {visibility: hidden;}
         
+        /* Botões do App */
         div.stButton > button {
             background-color: #01b4e4 !important;
             color: white !important;
@@ -38,6 +39,18 @@ st.markdown(
         div.stButton > button:hover {
             background-color: #0096c7 !important;
             color: white !important;
+        }
+        
+        /* Estilização para Títulos de Seção */
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
     </style>
     """,
@@ -445,15 +458,21 @@ else:
                             st.session_state.filme_id_selecionado = item["id"]
                             st.rerun()
     else:
-        tendencias = carregar_lista("trending/movie/week")
-        populares = carregar_lista("movie/popular")
-        em_cartaz = carregar_lista("movie/now_playing")
+        # --- HOME IDÊNTICA AO PORTAL TMDB COM ABAS DE FILTRO ---
+        tendencias_hoje = carregar_lista("trending/movie/day")
+        tendencias_semana = carregar_lista("trending/movie/week")
+
+        populares_streaming = carregar_lista("movie/popular")
+        populares_cinema = carregar_lista("movie/now_playing")
 
         banner_img = (
-            random.choice([f["backdrop"] for f in tendencias if f["backdrop"]])
-            if tendencias
+            random.choice(
+                [f["backdrop"] for f in tendencias_semana if f["backdrop"]]
+            )
+            if tendencias_semana
             else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
         )
+
         st.markdown(
             f"""
             <style>
@@ -483,7 +502,10 @@ else:
 
         if termo_pesquisa:
             todos_filmes = list(
-                {f["id"]: f for f in (tendencias + populares + em_cartaz)}.values()
+                {
+                    f["id"]: f
+                    for f in (tendencias_semana + populares_streaming)
+                }.values()
             )
             resultados = [
                 f
@@ -512,12 +534,23 @@ else:
             else:
                 st.warning("Nenhum filme encontrado.")
         else:
+            # --- SEÇÃO 1: TENDÊNCIAS COM ABAS (Hoje / Nesta Semana) ---
             st.markdown(
-                "<h3 style='color: white; margin-top: 25px; margin-bottom: 15px;'>Tendências da Semana</h3>",
+                '<div class="section-title">Tendências</div>',
                 unsafe_allow_html=True,
             )
+            aba_tend = st.radio(
+                "Tendências",
+                ["Hoje", "Nesta Semana"],
+                horizontal=True,
+                label_visibility="collapsed",
+            )
+
+            filmes_tend = (
+                tendencias_hoje if aba_tend == "Hoje" else tendencias_semana
+            )
             cols_tend = st.columns(4)
-            for idx, filme in enumerate(tendencias[:4]):
+            for idx, filme in enumerate(filmes_tend[:4]):
                 with cols_tend[idx]:
                     st.image(filme["poster"], use_column_width=True)
                     st.markdown(
@@ -532,32 +565,25 @@ else:
                         st.session_state.filme_id_selecionado = filme["id"]
                         st.rerun()
 
+            # --- SEÇÃO 2: OS MAIS POPULARES COM ABAS (Streaming / Nos Cinemas) ---
             st.markdown(
-                "<h3 style='color: white; margin-top: 35px; margin-bottom: 15px;'>Em Cartaz nos Cinemas</h3>",
+                '<div class="section-title">Os Mais Populares</div>',
                 unsafe_allow_html=True,
             )
-            cols_cart = st.columns(4)
-            for idx, filme in enumerate(em_cartaz[:4]):
-                with cols_cart[idx]:
-                    st.image(filme["poster"], use_column_width=True)
-                    st.markdown(
-                        f"""
-                        <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
-                        <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
-                        <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
-                    if st.button("Ver Detalhes", key=f"home_cart_{filme['id']}"):
-                        st.session_state.filme_id_selecionado = filme["id"]
-                        st.rerun()
+            aba_pop = st.radio(
+                "Populares",
+                ["Streaming", "Nos Cinemas"],
+                horizontal=True,
+                label_visibility="collapsed",
+            )
 
-            st.markdown(
-                "<h3 style='color: white; margin-top: 35px; margin-bottom: 15px;'>Filmes Populares</h3>",
-                unsafe_allow_html=True,
+            filmes_pop = (
+                populares_streaming
+                if aba_pop == "Streaming"
+                else populares_cinema
             )
             cols_pop = st.columns(4)
-            for idx, filme in enumerate(populares[:4]):
+            for idx, filme in enumerate(filmes_pop[:4]):
                 with cols_pop[idx]:
                     st.image(filme["poster"], use_column_width=True)
                     st.markdown(
