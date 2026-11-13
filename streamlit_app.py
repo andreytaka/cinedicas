@@ -48,42 +48,61 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- NAVBAR SUPERIOR ---
-st.markdown(
-    """
-    <div class="top-navbar">
-        <div class="nav-logo">CineDicas 🎬</div>
-    </div>
-""",
-    unsafe_allow_html=True,
-)
 
-
-# --- FUNÇÃO PARA BUSCAR TRAILER NO YOUTUBE VIA TMDB ---
-def buscar_trailer(movie_id):
-    url = f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}&language=pt-BR"
+# --- FUNÇÃO PARA BUSCAR DETALHES COMPLETOS DO FILME (ELENCO E TRAILER) ---
+def buscar_detalhes_filme(movie_id):
+    # Buscar Elenco
+    creditos_url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}&language=pt-BR"
+    elenco = []
     try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            videos = response.json().get("results", [])
-            # Procura por um trailer oficial no YouTube
-            for v in videos:
-                if v.get("site") == "YouTube" and v.get("type") == "Trailer":
-                    return f"https://www.youtube.com/watch?v={v.get('key')}"
-            # Se não achar em português, tenta em inglês
-            url_en = f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}&language=en-US"
-            resp_en = requests.get(url_en)
-            if resp_en.status_code == 200:
-                videos_en = resp_en.json().get("results", [])
-                for v in videos_en:
-                    if v.get("site") == "YouTube" and v.get("type") == "Trailer":
-                        return f"https://www.youtube.com/watch?v={v.get('key')}"
+        resp = requests.get(creditos_url)
+        if resp.status_code == 200:
+            cast = resp.json().get("cast", [])
+            for ator in cast[:6]:  # Pega os 6 principais atores
+                elenco.append(
+                    {
+                        "nome": ator.get("name"),
+                        "personagem": ator.get("character"),
+                        "foto": (
+                            f"https://image.tmdb.org/t/p/w185{ator.get('profile_path')}"
+                            if ator.get("profile_path")
+                            else "https://via.placeholder.com/185x278?text=Sem+Foto"
+                        ),
+                    }
+                )
     except Exception:
         pass
-    return None
+
+    # Buscar Trailer
+    videos_url = f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}&language=pt-BR"
+    trailer_url = None
+    try:
+        resp = requests.get(videos_url)
+        if resp.status_code == 200:
+            videos = resp.json().get("results", [])
+            for v in videos:
+                if v.get("site") == "YouTube" and v.get("type") == "Trailer":
+                    trailer_url = f"https://www.youtube.com/watch?v={v.get('key')}"
+                    break
+        if not trailer_url:
+            # Tenta em inglês se não achar em pt
+            resp_en = requests.get(
+                f"https://api.themoviedb.org/3/movie/{movie_id}/videos?api_key={API_KEY}&language=en-US"
+            )
+            if resp_en.status_code == 200:
+                for v in resp_en_json := resp_en.json().get("results", []):
+                    if v.get("site") == "YouTube" and v.get("type") == "Trailer":
+                        trailer_url = (
+                            f"https://www.youtube.com/watch?v={v.get('key')}"
+                        )
+                        break
+    except Exception:
+        pass
+
+    return elenco, trailer_url
 
 
-# --- FUNÇÃO PARA BUSCAR CATÁLOGO ---
+# --- FUNÇÃO PARA BUSCAR CATÁLOGO DE TENDÊNCIAS ---
 @st.cache_data
 def carregar_catalogo():
     url = f"https://api.themoviedb.org/3/trending/movie/week?api_key={API_KEY}&language=pt-BR"
@@ -96,9 +115,6 @@ def carregar_catalogo():
                 movie_id = item.get("id")
                 poster_path = item.get("poster_path")
                 backdrop_path = item.get("backdrop_path")
-
-                # Busca o trailer do filme
-                trailer_url = buscar_trailer(movie_id)
 
                 filmes.append(
                     {
@@ -121,7 +137,6 @@ def carregar_catalogo():
                         ),
                         "voto": round(item.get("vote_average", 0) * 10),
                         "visao": item.get("overview", "Sem sinopse disponível."),
-                        "trailer": trailer_url,
                     }
                 )
             return filmes
@@ -137,98 +152,177 @@ if not catalogo:
         "Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão."
     )
 else:
-    # --- HERO BANNER DINÂMICO ---
-    backdrops_disponiveis = [
-        item["backdrop"] for item in catalogo if item.get("backdrop")
-    ]
-    banner_img = (
-        random.choice(backdrops_disponiveis)
-        if backdrops_disponiveis
-        else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
-    )
+    # --- GERENCIAMENTO DE ESTADO DE NAVEGAÇÃO ---
+    if "filme_selecionado" not in st.session_state:
+        st.session_state.filme_selecionado = None
 
-    st.markdown(
-        f"""
-        <style>
-        .hero-container {{
-            background: linear-gradient(rgba(3, 37, 65, 0.8), rgba(3, 37, 65, 0.8)), url('{banner_img}');
-            background-size: cover;
-            background-position: center;
-            padding: 50px 40px;
-            border-radius: 8px;
-            color: #ffffff;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        }}
-        .hero-title {{
-            font-size: 40px;
-            font-weight: 800;
-            margin-bottom: 5px;
-            color: #ffffff;
-        }}
-        .hero-subtitle {{
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 25px;
-            color: #ffffff;
-        }}
-        </style>
-        <div class="hero-container">
-            <div class="hero-title">Bem-vindo(a).</div>
-            <div class="hero-subtitle">Milhões de Filmes, Séries e Pessoas para Descobrir. Explore já.</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    # --- TELA DE DETALHES DO FILME (ESTILO TMDB) ---
+    if st.session_state.filme_selecionado is not None:
+        filme = st.session_state.filme_selecionado
 
-    # --- BARRA DE PESQUISA ---
-    pesquisa = st.text_input(
-        "🔍 Pesquisar...",
-        placeholder="Busque por um filme...",
-        label_visibility="collapsed",
-    )
+        # Botão para voltar à página principal
+        if st.button("⬅ Voltar para Início"):
+            st.session_state.filme_selecionado = None
+            st.rerun()
 
-    filmes_exibidos = catalogo
-    if pesquisa:
-        filmes_exibidos = [
-            f
-            for f in catalogo
-            if pesquisa.lower() in f["titulo"].lower()
-        ]
+        elenco, trailer = buscar_detalhes_filme(filme["id"])
+        bg_img = (
+            filme["backdrop"]
+            if filme["backdrop"]
+            else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
+        )
 
-    # --- SEÇÃO DE FILMES ---
-    st.markdown(
-        "<h3 style='color: #ffffff; margin-top: 20px; margin-bottom: 20px;'>Filmes em Destaque</h3>",
-        unsafe_allow_html=True,
-    )
+        # Banner estilo TMDb com fundo do filme
+        st.markdown(
+            f"""
+            <style>
+            .tmdb-details-hero {{
+                background: linear-gradient(to right, rgba(3, 37, 65, 0.9) 0%, rgba(3, 37, 65, 0.8) 100%), url('{bg_img}');
+                background-size: cover;
+                background-position: center;
+                padding: 40px;
+                border-radius: 10px;
+                color: white;
+                margin-bottom: 30px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
 
-    if not filmes_exibidos:
-        st.warning("Nenhum filme encontrado com esse termo.")
+        # Layout detalhado dividindo colunas (Pôster e Informações)
+        with st.container():
+            st.markdown(
+                f'<div class="tmdb-details-hero">', unsafe_allow_html=True
+            )
+            col_poster, col_info = st.columns([1, 2.5])
+
+            with col_poster:
+                st.image(filme["poster"], use_column_width=True)
+
+            with col_info:
+                st.markdown(
+                    f"<h1 style='color: white; margin-bottom: 0;'>{filme['titulo']}</h1>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"<p style='color: #cccccc; font-size: 16px;'>Lançamento: {filme['lancamento']}</p>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"<h3 style='color: #01b4e4; margin-top: 10px;'>⭐ Avaliação dos usuários: {filme['voto']}%</h3>",
+                    unsafe_allow_html=True,
+                )
+
+                if trailer:
+                    st.markdown(
+                        f'<a href="{trailer}" target="_blank"><button style="background-color:#01b4e4; color:white; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer; margin-top:10px; margin-bottom:15px;">▶ Reproduzir Trailer</button></a>',
+                        unsafe_allow_html=True,
+                    )
+
+                st.markdown(
+                    "<h3 style='margin-top: 15px;'>Sinopse</h3>",
+                    unsafe_allow_html=True,
+                )
+                st.write(
+                    filme["visao"]
+                    if filme["visao"]
+                    else "Sinopse não disponível em português."
+                )
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        # Seção de Elenco
+        if elenco:
+            st.markdown(
+                "<h3 style='color: white; margin-top: 30px; margin-bottom: 20px;'>Elenco Principal</h3>",
+                unsafe_allow_html=True,
+            )
+            cols_elenco = st.columns(len(elenco) if len(elenco) <= 6 else 6)
+            for idx, ator in enumerate(elenco):
+                with cols_elenco[idx]:
+                    st.image(ator["foto"], use_column_width=True)
+                    st.markdown(
+                        f"<div style='font-weight: 700; font-size: 13px; color: white;'>{ator['nome']}</div>",
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f"<div style='font-size: 12px; color: #aaaaaa;'>{ator['personagem']}</div>",
+                        unsafe_allow_html=True,
+                    )
+
     else:
-        cols_por_linha = 4
-        for i in range(0, len(filmes_exibidos), cols_por_linha):
-            cols = st.columns(cols_por_linha)
-            for j in range(cols_por_linha):
-                if i + j < len(filmes_exibidos):
-                    filme = filmes_exibidos[i + j]
-                    with cols[j]:
-                        st.image(filme["poster"], use_column_width=True)
-                        st.markdown(
-                            f"""
-                            <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
-                            <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
-                            <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
+        # --- TELA PRINCIPAL (HOME) ---
+        # Navbar Superior com Logo
+        st.markdown(
+            """
+            <div class="top-navbar">
+                <div class="nav-logo">CineDicas 🎬</div>
+            </div>
+        """,
+            unsafe_allow_html=True,
+        )
 
-                        # Botão de Trailer (se disponível)
-                        if filme["trailer"]:
-                            st.markdown(
-                                f'<a href="{filme["trailer"]}" target="_blank"><button style="width:100%; background-color:#01b4e4; color:white; border:none; padding:6px; border-radius:4px; font-weight:bold; cursor:pointer; margin-bottom:5px;">▶ Ver Trailer</button></a>',
-                                unsafe_allow_html=True,
-                            )
+        # Hero Banner Dinâmico de Boas-Vindas
+        backdrops_disponiveis = [
+            item["backdrop"] for item in catalogo if item.get("backdrop")
+        ]
+        banner_img = (
+            random.choice(backdrops_disponiveis)
+            if backdrops_disponiveis
+            else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
+        )
 
-                        # Expander para a Sinopse
-                        with st.expander("Sinopse"):
-                            st.write(filme["visao"])
+        st.markdown(
+            f"""
+            <style>
+            .hero-container {{
+                background: linear-gradient(rgba(3, 37, 65, 0.8), rgba(3, 37, 65, 0.8)), url('{banner_img}');
+                background-size: cover;
+                background-position: center;
+                padding: 50px 40px;
+                border-radius: 8px;
+                color: #ffffff;
+                margin-bottom: 30px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            }}
+            </style>
+            <div class="hero-container">
+                <h1 style="font-size: 40px; font-weight: 800; margin-bottom: 5px; color: #ffffff;">Bem-vindo(a).</h1>
+                <p style="font-size: 20px; font-weight: 600; margin-bottom: 25px; color: #ffffff;">Milhões de Filmes, Séries e Pessoas para Descobrir. Explore já.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Barra de Pesquisa
+        pesquisa = st.text_input(
+            "🔍 Pesquisar...",
+            placeholder="Busque por um filme...",
+            label_visibility="collapsed",
+        )
+
+        filmes_exibidos = catalogo
+        if pesquisa:
+            filmes_exibidos = [
+                f
+                for f in catalogo
+                if pesquisa.lower() in f["titulo"].lower()
+            ]
+
+        # Seção de Filmes em Destaque
+        st.markdown(
+            "<h3 style='color: #ffffff; margin-top: 20px; margin-bottom: 20px;'>Filmes em Destaque</h3>",
+            unsafe_allow_html=True,
+        )
+
+        if not filmes_exibidos:
+            st.warning("Nenhum filme encontrado com esse termo.")
+        else:
+            cols_por_linha = 4
+            for i in range(0, len(filmes_exibidos), cols_por_linha):
+                cols = st.columns(cols_por_linha)
+                for j in range(cols_por_linha):
+                    if i + j < len(filmes_exibidos):
+                    ...  # (continuação da grade)
