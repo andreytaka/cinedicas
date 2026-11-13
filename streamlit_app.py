@@ -196,7 +196,3 @@ else:
                         # Botão para ver a sinopse / detalhes
                         with st.expander("Ver Sinopse"):
                             st.write(filme["visao"])
-                        <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 10px;">Lançamento: {filme['lancamento']}</div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
