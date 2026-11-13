@@ -14,7 +14,7 @@ st.set_page_config(
 # Chave da API do TMDb integrada
 API_KEY = "81b9f974da505f74247634bd774323b9"
 
-# --- ESTILIZAÇÃO CSS (PADRÃO TMDB COMPLETO) ---
+# --- ESTILIZAÇÃO CSS (PADRÃO TMDB PROFISSIONAL) ---
 st.markdown(
     """
     <style>
@@ -34,7 +34,8 @@ st.markdown(
             width: 100% !important;
             border-radius: 6px !important;
             border: none !important;
-            padding: 8px 12px !important;
+            padding: 6px 10px !important;
+            font-size: 13px !important;
         }
         div.stButton > button:hover {
             background-color: #0096c7 !important;
@@ -46,11 +47,11 @@ st.markdown(
             display: flex;
             align-items: center;
             gap: 20px;
-            margin-top: 35px;
-            margin-bottom: 20px;
+            margin-top: 30px;
+            margin-bottom: 15px;
         }
         .tmdb-title {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 700;
             color: #ffffff;
             margin: 0;
@@ -447,7 +448,7 @@ else:
             unsafe_allow_html=True,
         )
 
-        cols_por_linha = 4
+        cols_por_linha = 6
         for i in range(0, len(lista_cat), cols_por_linha):
             cols = st.columns(cols_por_linha)
             for j in range(cols_por_linha):
@@ -457,17 +458,16 @@ else:
                         st.image(item["poster"], use_column_width=True)
                         st.markdown(
                             f"""
-                            <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{item['titulo']}</div>
-                            <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {item['lancamento']}</div>
-                            <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {item['voto']}%</div>
+                            <div style="font-weight: 700; font-size: 13px; margin-top: 5px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{item['titulo']}</div>
+                            <div style="font-size: 11px; color: #aaaaaa; margin-bottom: 3px;">{item['lancamento']}</div>
+                            <div style="font-size: 11px; color: #01b4e4; font-weight: bold; margin-bottom: 8px;">⭐ {item['voto']}%</div>
                             """,
                             unsafe_allow_html=True,
                         )
-                        if st.button("Ver Detalhes", key=f"cat_{item['id']}"):
+                        if st.button("Ver", key=f"cat_{item['id']}"):
                             st.session_state.filme_id_selecionado = item["id"]
                             st.rerun()
     else:
-        # --- HOME IDÊNTICA AO PORTAL TMDB DA IMAGEM ---
         tendencias_hoje = carregar_lista("trending/movie/day")
         tendencias_semana = carregar_lista("trending/movie/week")
 
@@ -483,7 +483,6 @@ else:
             else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
         )
 
-        # 1. Hero Banner e Barra de Pesquisa logo abaixo do menu (exatamente como na imagem)
         st.markdown(
             f"""
             <style>
@@ -532,24 +531,24 @@ else:
                 unsafe_allow_html=True,
             )
             if resultados:
-                cols = st.columns(4)
+                cols = st.columns(6)
                 for idx, filme in enumerate(resultados):
-                    with cols[idx % 4]:
+                    with cols[idx % 6]:
                         st.image(filme["poster"], use_column_width=True)
                         st.markdown(
                             f"""
-                            <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff;">{filme['titulo']}</div>
-                            <div style="font-size: 13px; color: #01b4e4; font-weight: bold;">⭐ {filme['voto']}%</div>
+                            <div style="font-weight: 700; font-size: 13px; margin-top: 5px; color: #ffffff;">{filme['titulo']}</div>
+                            <div style="font-size: 11px; color: #01b4e4; font-weight: bold;">⭐ {filme['voto']}%</div>
                             """,
                             unsafe_allow_html=True,
                         )
-                        if st.button("Ver Detalhes", key=f"pesq_{filme['id']}"):
+                        if st.button("Ver", key=f"pesq_{filme['id']}"):
                             st.session_state.filme_id_selecionado = filme["id"]
                             st.rerun()
             else:
                 st.warning("Nenhum filme encontrado.")
         else:
-            # --- SEÇÃO 1: TENDÊNCIAS COM ABAS (Hoje / Nesta Semana) ---
+            # --- SEÇÃO 1: TENDÊNCIAS (6 itens por linha, pôsteres menores) ---
             c_titulo1, c_radio1 = st.columns([1.5, 4])
             with c_titulo1:
                 st.markdown(
@@ -568,23 +567,23 @@ else:
             filmes_tend = (
                 tendencias_hoje if aba_tend == "Hoje" else tendencias_semana
             )
-            cols_tend = st.columns(4)
-            for idx, filme in enumerate(filmes_tend[:4]):
+            cols_tend = st.columns(6)
+            for idx, filme in enumerate(filmes_tend[:6]):
                 with cols_tend[idx]:
                     st.image(filme["poster"], use_column_width=True)
                     st.markdown(
                         f"""
-                        <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
-                        <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
-                        <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                        <div style="font-weight: 700; font-size: 13px; margin-top: 5px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
+                        <div style="font-size: 11px; color: #aaaaaa; margin-bottom: 3px;">{filme['lancamento']}</div>
+                        <div style="font-size: 11px; color: #01b4e4; font-weight: bold; margin-bottom: 8px;">⭐ {filme['voto']}%</div>
                         """,
                         unsafe_allow_html=True,
                     )
-                    if st.button("Ver Detalhes", key=f"home_tend_{filme['id']}"):
+                    if st.button("Ver", key=f"home_tend_{filme['id']}"):
                         st.session_state.filme_id_selecionado = filme["id"]
                         st.rerun()
 
-            # --- SEÇÃO 2: OS MAIS POPULARES COM ABAS (Streaming / Nos Cinemas) ---
+            # --- SEÇÃO 2: OS MAIS POPULARES (6 itens por linha) ---
             c_titulo2, c_radio2 = st.columns([2, 4])
             with c_titulo2:
                 st.markdown(
@@ -605,23 +604,23 @@ else:
                 if aba_pop == "Streaming"
                 else populares_cinema
             )
-            cols_pop = st.columns(4)
-            for idx, filme in enumerate(filmes_pop[:4]):
+            cols_pop = st.columns(6)
+            for idx, filme in enumerate(filmes_pop[:6]):
                 with cols_pop[idx]:
                     st.image(filme["poster"], use_column_width=True)
                     st.markdown(
                         f"""
-                        <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
-                        <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
-                        <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                        <div style="font-weight: 700; font-size: 13px; margin-top: 5px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
+                        <div style="font-size: 11px; color: #aaaaaa; margin-bottom: 3px;">{filme['lancamento']}</div>
+                        <div style="font-size: 11px; color: #01b4e4; font-weight: bold; margin-bottom: 8px;">⭐ {filme['voto']}%</div>
                         """,
                         unsafe_allow_html=True,
                     )
-                    if st.button("Ver Detalhes", key=f"home_pop_{filme['id']}"):
+                    if st.button("Ver", key=f"home_pop_{filme['id']}"):
                         st.session_state.filme_id_selecionado = filme["id"]
                         st.rerun()
 
-            # --- SEÇÃO 3: GRÁTIS PARA ASSISTIR ---
+            # --- SEÇÃO 3: GRÁTIS PARA ASSISTIR (6 itens por linha) ---
             c_titulo3, c_radio3 = st.columns([2.2, 4])
             with c_titulo3:
                 st.markdown(
@@ -637,18 +636,18 @@ else:
                     key="radio_gratis",
                 )
 
-            cols_gratis = st.columns(4)
-            for idx, filme in enumerate(gratis_assistir[:4]):
+            cols_gratis = st.columns(6)
+            for idx, filme in enumerate(gratis_assistir[:6]):
                 with cols_gratis[idx]:
                     st.image(filme["poster"], use_column_width=True)
                     st.markdown(
                         f"""
-                        <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
-                        <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
-                        <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                        <div style="font-weight: 700; font-size: 13px; margin-top: 5px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
+                        <div style="font-size: 11px; color: #aaaaaa; margin-bottom: 3px;">{filme['lancamento']}</div>
+                        <div style="font-size: 11px; color: #01b4e4; font-weight: bold; margin-bottom: 8px;">⭐ {filme['voto']}%</div>
                         """,
                         unsafe_allow_html=True,
                     )
-                    if st.button("Ver Detalhes", key=f"home_gratis_{filme['id']}"):
+                    if st.button("Ver", key=f"home_gratis_{filme['id']}"):
                         st.session_state.filme_id_selecionado = filme["id"]
                         st.rerun()
