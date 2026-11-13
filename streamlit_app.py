@@ -26,7 +26,7 @@ st.markdown(
         footer {visibility: hidden;}
         header {visibility: hidden;}
         
-        /* Remover bordas feias de botões e estilizar como link de imagem */
+        /* Estilização limpa para o botão que serve de link no título/cartaz */
         div.stButton > button {
             background-color: transparent !important;
             color: #ffffff !important;
@@ -450,10 +450,6 @@ else:
                 if i + j < len(lista_cat):
                     item = lista_cat[i + j]
                     with cols[j]:
-                        if st.button("", key=f"img_cat_{item['id']}", help="Clique para ver detalhes"):
-                            st.session_state.filme_id_selecionado = item["id"]
-                            st.rerun()
-                        # Exibimos a imagem do pôster integrada com o título clicável
                         st.image(item["poster"], use_column_width=True)
                         if st.button(item['titulo'], key=f"title_cat_{item['id']}"):
                             st.session_state.filme_id_selecionado = item["id"]
@@ -575,11 +571,11 @@ else:
             else:
                 st.warning("Nenhum filme encontrado.")
         else:
-            # --- FUNÇÃO AUXILIAR PARA RENDERIZAR OS CARDS CLICÁVEIS ---
+            # --- FUNÇÃO AUXILIAR PARA RENDERIZAR OS CARDS LIMPOS ---
             def exibir_card_filme(filme, prefixo_chave):
-                # Imagem do pôster exibida diretamente na coluna
+                # Apenas a imagem limpa do pôster
                 st.image(filme["poster"], use_column_width=True)
-                # Título clicável que substitui o botão "Ver"
+                # Título que funciona como link interativo logo abaixo do cartaz
                 if st.button(filme['titulo'], key=f"{prefixo_chave}_title_{filme['id']}"):
                     st.session_state.filme_id_selecionado = filme["id"]
                     st.rerun()
