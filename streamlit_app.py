@@ -14,7 +14,7 @@ st.set_page_config(
 # Chave da API do TMDb integrada
 API_KEY = "81b9f974da505f74247634bd774323b9"
 
-# --- ESTILIZAÇÃO CSS (PADRÃO TMDB PROFISSIONAL) ---
+# --- ESTILIZAÇÃO CSS (PADRÃO TMDB COMPLETO) ---
 st.markdown(
     """
     <style>
@@ -26,7 +26,7 @@ st.markdown(
         footer {visibility: hidden;}
         header {visibility: hidden;}
         
-        /* Botões do App */
+        /* Botões Estilizados */
         div.stButton > button {
             background-color: #01b4e4 !important;
             color: white !important;
@@ -41,16 +41,19 @@ st.markdown(
             color: white !important;
         }
         
-        /* Estilização para Títulos de Seção */
-        .section-title {
+        /* Cabeçalhos de Seções */
+        .tmdb-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 35px;
+            margin-bottom: 20px;
+        }
+        .tmdb-title {
             font-size: 24px;
             font-weight: 700;
             color: #ffffff;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
+            margin: 0;
         }
     </style>
     """,
@@ -214,13 +217,13 @@ def mudar_awards():
         st.session_state.filme_id_selecionado = None
 
 
-# --- NAVBAR SUPERIOR ---
-col_logo, col_filmes, col_series, col_pes, col_aw, col_mais = st.columns(
-    [1.5, 1.2, 1.2, 1.2, 1.2, 1.2]
+# --- NAVBAR SUPERIOR EXATA DO TMDB ---
+col_logo, col_filmes, col_series, col_pes, col_aw, col_mais, col_entrar = st.columns(
+    [1.8, 1.1, 1.1, 1.1, 1.1, 1.1, 1.2]
 )
 
 with col_logo:
-    if st.button("CineDicas 🎬", key="logo_home_btn"):
+    if st.button("TMDB 🎬", key="logo_home_btn"):
         st.session_state.filme_id_selecionado = None
         st.session_state.filtro_categoria = "Início"
         st.rerun()
@@ -272,8 +275,14 @@ with col_mais:
         "Mais", ["Mais", "Sobre o App", "API TMDb"], label_visibility="collapsed"
     )
 
+with col_entrar:
+    st.markdown(
+        "<div style='text-align: right; color: white; font-weight: 600; padding-top: 8px;'>Entrar</div>",
+        unsafe_allow_html=True,
+    )
+
 st.markdown(
-    "<hr style='margin-top: 0px; margin-bottom: 20px; border-color: #0d253f;'>",
+    "<hr style='margin-top: 5px; margin-bottom: 15px; border-color: #0d253f;'>",
     unsafe_allow_html=True,
 )
 
@@ -458,12 +467,13 @@ else:
                             st.session_state.filme_id_selecionado = item["id"]
                             st.rerun()
     else:
-        # --- HOME IDÊNTICA AO PORTAL TMDB COM ABAS DE FILTRO ---
+        # --- HOME IDÊNTICA AO PORTAL TMDB DA IMAGEM ---
         tendencias_hoje = carregar_lista("trending/movie/day")
         tendencias_semana = carregar_lista("trending/movie/week")
 
         populares_streaming = carregar_lista("movie/popular")
         populares_cinema = carregar_lista("movie/now_playing")
+        gratis_assistir = carregar_lista("movie/top_rated")
 
         banner_img = (
             random.choice(
@@ -473,6 +483,7 @@ else:
             else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
         )
 
+        # 1. Hero Banner e Barra de Pesquisa logo abaixo do menu (exatamente como na imagem)
         st.markdown(
             f"""
             <style>
@@ -483,7 +494,7 @@ else:
                 padding: 40px;
                 border-radius: 8px;
                 color: white;
-                margin-bottom: 25px;
+                margin-bottom: 20px;
             }}
             </style>
             <div class="hero-home">
@@ -496,7 +507,7 @@ else:
 
         termo_pesquisa = st.text_input(
             "🔍 Pesquisar...",
-            placeholder="Busque por um filme...",
+            placeholder="Buscar um filme, uma série ou uma pessoa...",
             label_visibility="collapsed",
         )
 
@@ -504,7 +515,11 @@ else:
             todos_filmes = list(
                 {
                     f["id"]: f
-                    for f in (tendencias_semana + populares_streaming)
+                    for f in (
+                        tendencias_semana
+                        + populares_streaming
+                        + populares_cinema
+                    )
                 }.values()
             )
             resultados = [
@@ -535,16 +550,20 @@ else:
                 st.warning("Nenhum filme encontrado.")
         else:
             # --- SEÇÃO 1: TENDÊNCIAS COM ABAS (Hoje / Nesta Semana) ---
-            st.markdown(
-                '<div class="section-title">Tendências</div>',
-                unsafe_allow_html=True,
-            )
-            aba_tend = st.radio(
-                "Tendências",
-                ["Hoje", "Nesta Semana"],
-                horizontal=True,
-                label_visibility="collapsed",
-            )
+            c_titulo1, c_radio1 = st.columns([1.5, 4])
+            with c_titulo1:
+                st.markdown(
+                    '<h3 class="tmdb-title">Tendências</h3>',
+                    unsafe_allow_html=True,
+                )
+            with c_radio1:
+                aba_tend = st.radio(
+                    "Tendências",
+                    ["Hoje", "Nesta Semana"],
+                    horizontal=True,
+                    label_visibility="collapsed",
+                    key="radio_tend",
+                )
 
             filmes_tend = (
                 tendencias_hoje if aba_tend == "Hoje" else tendencias_semana
@@ -566,16 +585,20 @@ else:
                         st.rerun()
 
             # --- SEÇÃO 2: OS MAIS POPULARES COM ABAS (Streaming / Nos Cinemas) ---
-            st.markdown(
-                '<div class="section-title">Os Mais Populares</div>',
-                unsafe_allow_html=True,
-            )
-            aba_pop = st.radio(
-                "Populares",
-                ["Streaming", "Nos Cinemas"],
-                horizontal=True,
-                label_visibility="collapsed",
-            )
+            c_titulo2, c_radio2 = st.columns([2, 4])
+            with c_titulo2:
+                st.markdown(
+                    '<h3 class="tmdb-title">Os Mais Populares</h3>',
+                    unsafe_allow_html=True,
+                )
+            with c_radio2:
+                aba_pop = st.radio(
+                    "Populares",
+                    ["Streaming", "Nos Cinemas"],
+                    horizontal=True,
+                    label_visibility="collapsed",
+                    key="radio_pop",
+                )
 
             filmes_pop = (
                 populares_streaming
@@ -595,5 +618,37 @@ else:
                         unsafe_allow_html=True,
                     )
                     if st.button("Ver Detalhes", key=f"home_pop_{filme['id']}"):
+                        st.session_state.filme_id_selecionado = filme["id"]
+                        st.rerun()
+
+            # --- SEÇÃO 3: GRÁTIS PARA ASSISTIR ---
+            c_titulo3, c_radio3 = st.columns([2.2, 4])
+            with c_titulo3:
+                st.markdown(
+                    '<h3 class="tmdb-title">Grátis para Assistir</h3>',
+                    unsafe_allow_html=True,
+                )
+            with c_radio3:
+                st.radio(
+                    "Gratis",
+                    ["Filmes", "TV"],
+                    horizontal=True,
+                    label_visibility="collapsed",
+                    key="radio_gratis",
+                )
+
+            cols_gratis = st.columns(4)
+            for idx, filme in enumerate(gratis_assistir[:4]):
+                with cols_gratis[idx]:
+                    st.image(filme["poster"], use_column_width=True)
+                    st.markdown(
+                        f"""
+                        <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
+                        <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
+                        <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button("Ver Detalhes", key=f"home_gratis_{filme['id']}"):
                         st.session_state.filme_id_selecionado = filme["id"]
                         st.rerun()
