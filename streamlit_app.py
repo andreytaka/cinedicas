@@ -37,7 +37,7 @@ st.markdown(
             margin-bottom: 25px;
         }
         
-        /* Estilização para os botões dos Cards e Menu */
+        /* Botões Estilizados */
         div.stButton > button {
             background-color: #01b4e4 !important;
             color: white !important;
@@ -179,49 +179,49 @@ def carregar_catalogo(endpoint="trending/movie/week"):
 
 
 # --- GERENCIAMENTO DE ESTADO DE NAVEGAÇÃO ---
-if "filme_selecionado" not in st.session_state:
-    st.session_state.filme_selecionado = None
+if "filme_id_selecionado" not in st.session_state:
+    st.session_state.filme_id_selecionado = None
 
 if "filtro_categoria" not in st.session_state:
     st.session_state.filtro_categoria = "Tendências"
 
-# --- NAVBAR SUPERIOR COM BOTÕES CLICÁVEIS ESTILO TMDB ---
+# --- NAVBAR SUPERIOR COM BOTÕES ---
 col_logo, c1, c2, c3, c4, c5 = st.columns([2, 1.2, 1.2, 1.2, 1.2, 1.2])
 
 with col_logo:
-    if st.button("CineDicas 🎬", key="logo_main"):
-        st.session_state.filme_selecionado = None
+    if st.button("CineDicas 🎬", key="logo_home"):
+        st.session_state.filme_id_selecionado = None
         st.session_state.filtro_categoria = "Tendências"
         st.rerun()
 
 with c1:
-    if st.button("Tendências", key="nav_tend"):
-        st.session_state.filro_categoria = "Tendências"
-        st.session_state.filme_selecionado = None
+    if st.button("Tendências", key="btn_tend"):
+        st.session_state.filtro_categoria = "Tendências"
+        st.session_state.filme_id_selecionado = None
         st.rerun()
 
 with c2:
-    if st.button("Populares", key="nav_pop"):
-        st.session_state.filro_categoria = "Populares"
-        st.session_state.filme_selecionado = None
+    if st.button("Populares", key="btn_pop"):
+        st.session_state.filtro_categoria = "Populares"
+        st.session_state.filme_id_selecionado = None
         st.rerun()
 
 with c3:
-    if st.button("Em Cartaz", key="nav_cartaz"):
-        st.session_state.filro_categoria = "Em Cartaz"
-        st.session_state.filme_selecionado = None
+    if st.button("Em Cartaz", key="btn_cartaz"):
+        st.session_state.filtro_categoria = "Em Cartaz"
+        st.session_state.filme_id_selecionado = None
         st.rerun()
 
 with c4:
-    if st.button("Mais Avaliados", key="nav_top"):
-        st.session_state.filro_categoria = "Mais Bem Avaliados"
-        st.session_state.filme_selecionado = None
+    if st.button("Mais Avaliados", key="btn_top"):
+        st.session_state.filtro_categoria = "Mais Bem Avaliados"
+        st.session_state.filme_id_selecionado = None
         st.rerun()
 
 with c5:
-    if st.button("Sobre", key="nav_sobre"):
-        st.session_state.filro_categoria = "Sobre"
-        st.session_state.filme_selecionado = None
+    if st.button("Sobre", key="btn_sobre"):
+        st.session_state.filtro_categoria = "Sobre"
+        st.session_state.filme_id_selecionado = None
         st.rerun()
 
 st.markdown(
@@ -245,120 +245,160 @@ elif st.session_state.filtro_categoria == "Mais Bem Avaliados":
 
 catalogo = carregar_catalogo(endpoint_api)
 
-# --- TELA DE DETALHES DO FILME ---
-if st.session_state.filme_selecionado is not None:
-    filme = st.session_state.filme_selecionado
-
-    if st.button("⬅ Voltar para a Lista", key="voltar_btn_detalhes"):
-        st.session_state.filme_selecionado = None
-        st.rerun()
-
-    elenco, trailer, provedores = buscar_detalhes_filme(filme["id"])
-    bg_img = (
-        filme["backdrop"]
-        if filme["backdrop"]
-        else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
+# --- SE HOUVER UM FILME SELECIONADO, EXIBE A TELA DE DETALHES ---
+if st.session_state.filme_id_selecionado is not None:
+    # Encontra o filme correspondente no catálogo atual
+    filme_atual = next(
+        (
+            f
+            for f in catalogo
+            if f["id"] == st.session_state.filme_id_selecionado
+        ),
+        None,
     )
 
-    st.markdown(
-        f"""
-        <style>
-        .tmdb-details-hero {{
-            background: linear-gradient(to right, rgba(3, 37, 65, 0.9) 0%, rgba(3, 37, 65, 0.8) 100%), url('{bg_img}');
-            background-size: cover;
-            background-position: center;
-            padding: 40px;
-            border-radius: 10px;
-            color: white;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    if not filme_atual:
+        # Se não achar no catálogo atual, busca direto pelo ID na API
+        url_detalhe = f"https://api.themoviedb.org/3/movie/{st.session_state.filme_id_selecionado}?api_key={API_KEY}&language=pt-BR"
+        resp = requests.get(url_detalhe)
+        if resp.status_code == 200:
+            item = resp.json()
+            poster_path = item.get("poster_path")
+            backdrop_path = item.get("backdrop_path")
+            filme_atual = {
+                "id": item.get("id"),
+                "titulo": item.get("title", "Sem Título"),
+                "lancamento": item.get("release_date", "--"),
+                "poster": (
+                    f"https://image.tmdb.org/t/p/w500{poster_path}"
+                    if poster_path
+                    else "https://via.placeholder.com/500x750?text=Sem+Imagem"
+                ),
+                "backdrop": (
+                    f"https://image.tmdb.org/t/p/w1280{backdrop_path}"
+                    if backdrop_path
+                    else None
+                ),
+                "voto": round(item.get("vote_average", 0) * 10),
+                "visao": item.get("overview", "Sem sinopse disponível."),
+            }
 
-    with st.container():
-        st.markdown(f'<div class="tmdb-details-hero">', unsafe_allow_html=True)
-        col_poster, col_info = st.columns([1, 2.5])
+    if filme_atual:
+        if st.button("⬅ Voltar para a Lista", key="voltar_lista"):
+            st.session_state.filme_id_selecionado = None
+            st.rerun()
 
-        with col_poster:
-            st.image(filme["poster"], use_column_width=True)
+        elenco, trailer, provedores = buscar_detalhes_filme(filme_atual["id"])
+        bg_img = (
+            filme_atual["backdrop"]
+            if filme_atual["backdrop"]
+            else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
+        )
 
-        with col_info:
-            st.markdown(
-                f"<h1 style='color: white; margin-bottom: 0;'>{filme['titulo']}</h1>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                f"<p style='color: #cccccc; font-size: 16px;'>Lançamento: {filme['lancamento']}</p>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                f"<h3 style='color: #01b4e4; margin-top: 10px;'>⭐ Avaliação: {filme['voto']}%</h3>",
-                unsafe_allow_html=True,
-            )
-
-            if trailer:
-                st.markdown(
-                    f'<a href="{trailer}" target="_blank"><button style="background-color:#01b4e4; color:white; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer; margin-top:10px; margin-bottom:15px;">▶ Reproduzir Trailer</button></a>',
-                    unsafe_allow_html=True,
-                )
-
-            st.markdown(
-                "<h3 style='margin-top: 15px;'>Onde Assistir</h3>",
-                unsafe_allow_html=True,
-            )
-            if provedores:
-                cols_prov = st.columns(
-                    len(provedores) if len(provedores) <= 6 else 6
-                )
-                for idx, prov in enumerate(provedores[:6]):
-                    with cols_prov[idx]:
-                        if prov["logo"]:
-                            st.image(prov["logo"], width=50)
-                        st.markdown(
-                            f"<div style='font-size: 12px; color: #ffffff;'>{prov['nome']}</div>",
-                            unsafe_allow_html=True,
-                        )
-            else:
-                st.markdown(
-                    "<p style='color: #aaaaaa;'>Nenhum serviço de streaming disponível no momento para este título no Brasil.</p>",
-                    unsafe_allow_html=True,
-                )
-
-            st.markdown(
-                "<h3 style='margin-top: 20px;'>Sinopse</h3>",
-                unsafe_allow_html=True,
-            )
-            st.write(
-                filme["visao"]
-                if filme["visao"]
-                else "Sinopse não disponível em português."
-            )
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    if elenco:
         st.markdown(
-            "<h3 style='color: white; margin-top: 30px; margin-bottom: 20px;'>Elenco Principal</h3>",
+            f"""
+            <style>
+            .tmdb-details-hero {{
+                background: linear-gradient(to right, rgba(3, 37, 65, 0.9) 0%, rgba(3, 37, 65, 0.8) 100%), url('{bg_img}');
+                background-size: cover;
+                background-position: center;
+                padding: 40px;
+                border-radius: 10px;
+                color: white;
+                margin-bottom: 30px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            }}
+            </style>
+            """,
             unsafe_allow_html=True,
         )
-        cols_elenco = st.columns(len(elenco) if len(elenco) <= 6 else 6)
-        for idx, ator in enumerate(elenco):
-            with cols_elenco[idx]:
-                st.image(ator["foto"], use_column_width=True)
+
+        with st.container():
+            st.markdown(f'<div class="tmdb-details-hero">', unsafe_allow_html=True)
+            col_poster, col_info = st.columns([1, 2.5])
+
+            with col_poster:
+                st.image(filme_atual["poster"], use_column_width=True)
+
+            with col_info:
                 st.markdown(
-                    f"<div style='font-weight: 700; font-size: 13px; color: white;'>{ator['nome']}</div>",
+                    f"<h1 style='color: white; margin-bottom: 0;'>{filme_atual['titulo']}</h1>",
                     unsafe_allow_html=True,
                 )
                 st.markdown(
-                    f"<div style='font-size: 12px; color: #aaaaaa;'>{ator['personagem']}</div>",
+                    f"<p style='color: #cccccc; font-size: 16px;'>Lançamento: {filme_atual['lancamento']}</p>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown(
+                    f"<h3 style='color: #01b4e4; margin-top: 10px;'>⭐ Avaliação: {filme_atual['voto']}%</h3>",
                     unsafe_allow_html=True,
                 )
 
+                if trailer:
+                    st.markdown(
+                        f'<a href="{trailer}" target="_blank"><button style="background-color:#01b4e4; color:white; border:none; padding:10px 20px; border-radius:5px; font-weight:bold; cursor:pointer; margin-top:10px; margin-bottom:15px;">▶ Reproduzir Trailer</button></a>',
+                        unsafe_allow_html=True,
+                    )
+
+                st.markdown(
+                    "<h3 style='margin-top: 15px;'>Onde Assistir</h3>",
+                    unsafe_allow_html=True,
+                )
+                if provedores:
+                    cols_prov = st.columns(
+                        len(provedores) if len(provedores) <= 6 else 6
+                    )
+                    for idx, prov in enumerate(provedores[:6]):
+                        with cols_prov[idx]:
+                            if prov["logo"]:
+                                st.image(prov["logo"], width=50)
+                            st.markdown(
+                                f"<div style='font-size: 12px; color: #ffffff;'>{prov['nome']}</div>",
+                                unsafe_allow_html=True,
+                            )
+                else:
+                    st.markdown(
+                        "<p style='color: #aaaaaa;'>Nenhum serviço de streaming disponível no momento para este título no Brasil.</p>",
+                        unsafe_allow_html=True,
+                    )
+
+                st.markdown(
+                    "<h3 style='margin-top: 20px;'>Sinopse</h3>",
+                    unsafe_allow_html=True,
+                )
+                st.write(
+                    filme_atual["visao"]
+                    if filme_atual["visao"]
+                    else "Sinopse não disponível em português."
+                )
+
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        if elenco:
+            st.markdown(
+                "<h3 style='color: white; margin-top: 30px; margin-bottom: 20px;'>Elenco Principal</h3>",
+                unsafe_allow_html=True,
+            )
+            cols_elenco = st.columns(len(elenco) if len(elenco) <= 6 else 6)
+            for idx, ator in enumerate(elenco):
+                with cols_elenco[idx]:
+                    st.image(ator["foto"], use_column_width=True)
+                    st.markdown(
+                        f"<div style='font-weight: 700; font-size: 13px; color: white;'>{ator['nome']}</div>",
+                        unsafe_allow_html=True,
+                    )
+                    st.markdown(
+                        f"<div style='font-size: 12px; color: #aaaaaa;'>{ator['personagem']}</div>",
+                        unsafe_allow_html=True,
+                    )
+    else:
+        st.error("Erro ao carregar os detalhes do filme.")
+        if st.button("Voltar"):
+            st.session_state.filme_id_selecionado = None
+            st.rerun()
+
 else:
-    # --- TELA PRINCIPAL / SOBRE ---
+    # --- TELA PRINCIPAL (HOME) ---
     if st.session_state.filtro_categoria == "Sobre":
         st.markdown(
             "<h2 style='color: white;'>Sobre o CineDicas 🎬</h2>",
@@ -442,9 +482,12 @@ else:
                                     """,
                                     unsafe_allow_html=True,
                                 )
-                                # Botão limpo, único e totalmente funcional para abrir os detalhes
+                                # Agora salvamos diretamente o ID numérico do filme no session_state
                                 if st.button(
-                                    "Ver Detalhes", key=f"detalhe_{filme['id']}"
+                                    "Ver Detalhes",
+                                    key=f"card_id_{filme['id']}",
                                 ):
-                                    st.session_state.filme_selecionado = filme
+                                    st.session_state.filme_id_selecionado = filme[
+                                        "id"
+                                    ]
                                     st.rerun()
