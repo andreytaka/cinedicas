@@ -29,23 +29,15 @@ st.markdown(
         /* Navbar Superior */
         .top-navbar {
             background-color: #032541;
-            padding: 10px 20px;
+            padding: 15px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid #0d253f;
-            margin-bottom: 20px;
-        }
-        .nav-logo {
-            font-size: 26px;
-            font-weight: 900;
-            color: #01b4e4;
-            text-decoration: none;
-            letter-spacing: 1px;
-            cursor: pointer;
+            margin-bottom: 25px;
         }
         
-        /* Botões dos Cards */
+        /* Estilização para os botões dos Cards e Menu */
         div.stButton > button {
             background-color: #01b4e4 !important;
             color: white !important;
@@ -193,58 +185,53 @@ if "filme_selecionado" not in st.session_state:
 if "filtro_categoria" not in st.session_state:
     st.session_state.filtro_categoria = "Tendências"
 
-# --- NAVBAR SUPERIOR COM MENUS INTERATIVOS (ESTILO TMDB) ---
-col_logo, col_filmes, col_series, col_pessoas, col_awards, col_mais = st.columns(
-    [2, 1.2, 1.2, 1.2, 1.2, 1.2]
-)
+# --- NAVBAR SUPERIOR COM BOTÕES CLICÁVEIS ESTILO TMDB ---
+col_logo, c1, c2, c3, c4, c5 = st.columns([2, 1.2, 1.2, 1.2, 1.2, 1.2])
 
 with col_logo:
-    if st.button("CineDicas 🎬", key="logo_btn"):
+    if st.button("CineDicas 🎬", key="logo_main"):
         st.session_state.filme_selecionado = None
         st.session_state.filtro_categoria = "Tendências"
         st.rerun()
 
-with col_filmes:
-    menu_filmes = st.selectbox(
-        "Filmes",
-        ["Filmes", "Populares", "Em Cartaz", "Mais Bem Avaliados"],
-        label_visibility="collapsed",
-    )
-    if menu_filmes != "Filmes":
-        st.session_state.filtro_categoria = menu_filmes
+with c1:
+    if st.button("Tendências", key="nav_tend"):
+        st.session_state.filro_categoria = "Tendências"
         st.session_state.filme_selecionado = None
         st.rerun()
 
-with col_series:
-    menu_series = st.selectbox(
-        "Séries",
-        ["Séries", "Populares (Séries)", "Em Breve"],
-        label_visibility="collapsed",
-    )
-    if menu_series != "Séries":
-        st.session_state.filtro_categoria = menu_series
+with c2:
+    if st.button("Populares", key="nav_pop"):
+        st.session_state.filro_categoria = "Populares"
         st.session_state.filme_selecionado = None
         st.rerun()
 
-with col_pessoas:
-    st.selectbox(
-        "Pessoas", ["Pessoas", "Artistas Populares"], label_visibility="collapsed"
-    )
+with c3:
+    if st.button("Em Cartaz", key="nav_cartaz"):
+        st.session_state.filro_categoria = "Em Cartaz"
+        st.session_state.filme_selecionado = None
+        st.rerun()
 
-with col_awards:
-    st.selectbox("Awards", ["Awards", "Melhores do Ano"], label_visibility="collapsed")
+with c4:
+    if st.button("Mais Avaliados", key="nav_top"):
+        st.session_state.filro_categoria = "Mais Bem Avaliados"
+        st.session_state.filme_selecionado = None
+        st.rerun()
 
-with col_mais:
-    st.selectbox("Mais", ["Mais", "Sobre", "API TMDb"], label_visibility="collapsed")
+with c5:
+    if st.button("Sobre", key="nav_sobre"):
+        st.session_state.filro_categoria = "Sobre"
+        st.session_state.filme_selecionado = None
+        st.rerun()
 
 st.markdown(
-    "<hr style='margin-top: 0px; border-color: #0d253f;'>",
+    "<hr style='margin-top: 5px; margin-bottom: 20px; border-color: #0d253f;'>",
     unsafe_allow_html=True,
 )
 
-# Definir qual endpoint carregar com base no menu selecionado
+# Definir qual endpoint carregar
 endpoint_api = "trending/movie/week"
-titulo_secao = "Filmes em Destaque (Tendências da Semana)"
+titulo_secao = "Tendências da Semana"
 
 if st.session_state.filtro_categoria == "Populares":
     endpoint_api = "movie/popular"
@@ -262,7 +249,7 @@ catalogo = carregar_catalogo(endpoint_api)
 if st.session_state.filme_selecionado is not None:
     filme = st.session_state.filme_selecionado
 
-    if st.button("⬅ Voltar para Início", key="voltar_home_btn"):
+    if st.button("⬅ Voltar para a Lista", key="voltar_btn_detalhes"):
         st.session_state.filme_selecionado = None
         st.rerun()
 
@@ -371,82 +358,93 @@ if st.session_state.filme_selecionado is not None:
                 )
 
 else:
-    # --- TELA PRINCIPAL (HOME) ---
-    if not catalogo:
-        st.error(
-            "Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão."
+    # --- TELA PRINCIPAL / SOBRE ---
+    if st.session_state.filtro_categoria == "Sobre":
+        st.markdown(
+            "<h2 style='color: white;'>Sobre o CineDicas 🎬</h2>",
+            unsafe_allow_html=True,
+        )
+        st.write(
+            "O CineDicas é um guia de filmes interativo desenvolvido com Streamlit e integrado à API oficial do TMDb. Explore tendências, confira avaliações, sinopses detalhadas, trailers e saiba exatamente onde assistir aos seus títulos favoritos!"
         )
     else:
-        backdrops_disponiveis = [
-            item["backdrop"] for item in catalogo if item.get("backdrop")
-        ]
-        banner_img = (
-            random.choice(backdrops_disponiveis)
-            if backdrops_disponiveis
-            else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
-        )
-
-        st.markdown(
-            f"""
-            <style>
-            .hero-container {{
-                background: linear-gradient(rgba(3, 37, 65, 0.8), rgba(3, 37, 65, 0.8)), url('{banner_img}');
-                background-size: cover;
-                background-position: center;
-                padding: 50px 40px;
-                border-radius: 8px;
-                color: #ffffff;
-                margin-bottom: 30px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            }}
-            </style>
-            <div class="hero-container">
-                <h1 style="font-size: 40px; font-weight: 800; margin-bottom: 5px; color: #ffffff;">Bem-vindo(a).</h1>
-                <p style="font-size: 20px; font-weight: 600; margin-bottom: 25px; color: #ffffff;">Milhões de Filmes, Séries e Pessoas para Descobrir. Explore já.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        pesquisa = st.text_input(
-            "🔍 Pesquisar...",
-            placeholder="Busque por um filme...",
-            label_visibility="collapsed",
-        )
-
-        filmes_exibidos = catalogo
-        if pesquisa:
-            filmes_exibidos = [
-                f
-                for f in catalogo
-                if pesquisa.lower() in f["titulo"].lower()
-            ]
-
-        st.markdown(
-            f"<h3 style='color: #ffffff; margin-top: 20px; margin-bottom: 20px;'>{titulo_secao}</h3>",
-            unsafe_allow_html=True,
-        )
-
-        if not filmes_exibidos:
-            st.warning("Nenhum filme encontrado com esse termo.")
+        if not catalogo:
+            st.error(
+                "Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão."
+            )
         else:
-            cols_por_linha = 4
-            for i in range(0, len(filmes_exibidos), cols_por_linha):
-                cols = st.columns(cols_por_linha)
-                for j in range(cols_por_linha):
-                    if i + j < len(filmes_exibidos):
-                        filme = filmes_exibidos[i + j]
-                        with cols[j]:
-                            st.image(filme["poster"], use_column_width=True)
-                            st.markdown(
-                                f"""
-                                <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
-                                <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
-                                <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
-                                """,
-                                unsafe_allow_html=True,
-                            )
-                            # Botão totalmente funcional para abrir os detalhes do filme
-                            if st.button("Ver Detalhes", key=f"btn_{filme['id']}_{i}_{j}"):
-                                st.session_state.filme_selecionado = filme
-                                st.rerun()
+            backdrops_disponiveis = [
+                item["backdrop"] for item in catalogo if item.get("backdrop")
+            ]
+            banner_img = (
+                random.choice(backdrops_disponiveis)
+                if backdrops_disponiveis
+                else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
+            )
+
+            st.markdown(
+                f"""
+                <style>
+                .hero-container {{
+                    background: linear-gradient(rgba(3, 37, 65, 0.8), rgba(3, 37, 65, 0.8)), url('{banner_img}');
+                    background-size: cover;
+                    background-position: center;
+                    padding: 50px 40px;
+                    border-radius: 8px;
+                    color: #ffffff;
+                    margin-bottom: 30px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                }}
+                </style>
+                <div class="hero-container">
+                    <h1 style="font-size: 40px; font-weight: 800; margin-bottom: 5px; color: #ffffff;">Bem-vindo(a).</h1>
+                    <p style="font-size: 20px; font-weight: 600; margin-bottom: 25px; color: #ffffff;">Milhões de Filmes, Séries e Pessoas para Descobrir. Explore já.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            pesquisa = st.text_input(
+                "🔍 Pesquisar...",
+                placeholder="Busque por um filme...",
+                label_visibility="collapsed",
+            )
+
+            filmes_exibidos = catalogo
+            if pesquisa:
+                filmes_exibidos = [
+                    f
+                    for f in catalogo
+                    if pesquisa.lower() in f["titulo"].lower()
+                ]
+
+            st.markdown(
+                f"<h3 style='color: #ffffff; margin-top: 20px; margin-bottom: 20px;'>{titulo_secao}</h3>",
+                unsafe_allow_html=True,
+            )
+
+            if not filmes_exibidos:
+                st.warning("Nenhum filme encontrado com esse termo.")
+            else:
+                cols_por_linha = 4
+                for i in range(0, len(filmes_exibidos), cols_por_linha):
+                    cols = st.columns(cols_por_linha)
+                    for j in range(cols_por_linha):
+                        if i + j < len(filmes_exibidos):
+                            filme = filmes_exibidos[i + j]
+                            with cols[j]:
+                                st.image(filme["poster"], use_column_width=True)
+                                st.markdown(
+                                    f"""
+                                    <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
+                                    <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
+                                    <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                                    """,
+                                    unsafe_allow_html=True,
+                                )
+                                # Botão limpo, único e totalmente funcional para abrir os detalhes
+                                if st.button(
+                                    "Ver Detalhes", key=f"detalhe_{filme['id']}"
+                                ):
+                                    st.session_state.filme_selecionado = filme
+                                    st.rerun()
