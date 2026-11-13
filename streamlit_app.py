@@ -14,7 +14,7 @@ st.set_page_config(
 # Chave da API do TMDb integrada
 API_KEY = "81b9f974da505f74247634bd774323b9"
 
-# --- ESTILIZAÇÃO CSS (PADRÃO TMDB) ---
+# --- ESTILIZAÇÃO CSS (PADRÃO TMDB HOME) ---
 st.markdown(
     """
     <style>
@@ -45,7 +45,7 @@ st.markdown(
 )
 
 
-# --- FUNÇÕES DE BUSCA DA API ---
+# --- FUNÇÃO PARA BUSCAR DETALHES, TRAILER E STREAMINGS ---
 def buscar_detalhes_filme(movie_id):
     creditos_url = f"https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={API_KEY}&language=pt-BR"
     elenco = []
@@ -124,79 +124,43 @@ def buscar_detalhes_filme(movie_id):
 
 
 @st.cache_data
-def carregar_catalogo(endpoint="trending/movie/week"):
+def carregar_lista(endpoint):
     url = f"https://api.themoviedb.org/3/{endpoint}?api_key={API_KEY}&language=pt-BR"
     try:
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            itens = []
+            filmes = []
             for item in data.get("results", []):
-                item_id = item.get("id")
-                # Se for a rota de pessoas populares, o campo de imagem é profile_path e o nome é name
-                if "person" in endpoint:
-                    profile_path = item.get("profile_path")
-                    # Conhecido por (known_for)
-                    conhecido_por = ", ".join(
-                        [
-                            k.get("title", k.get("name", ""))
-                            for k in item.get("known_for", [])
-                            if k.get("title") or k.get("name")
-                        ]
-                    )
-                    itens.append(
-                        {
-                            "id": item_id,
-                            "titulo": item.get("name", "Sem Nome"),
-                            "lancamento": (
-                                f"Conhecido(a) por: {conhecido_por[:30]}..."
-                                if conhecido_por
-                                else "Ator/Atriz"
-                            ),
-                            "poster": (
-                                f"https://image.tmdb.org/t/p/w500{profile_path}"
-                                if profile_path
-                                else "https://via.placeholder.com/500x750?text=Sem+Foto"
-                            ),
-                            "backdrop": None,
-                            "voto": round(item.get("popularity", 0)),
-                            "visao": f"Profissão: {item.get('known_for_department', 'Atuação')}.",
-                            "tipo": "pessoa",
-                        }
-                    )
-                else:
-                    poster_path = item.get("poster_path")
-                    backdrop_path = item.get("backdrop_path")
-                    itens.append(
-                        {
-                            "id": item_id,
-                            "titulo": item.get(
-                                "title", item.get("name", "Sem Título")
-                            ),
-                            "lancamento": item.get(
-                                "release_date",
-                                item.get("first_air_date", "--"),
-                            ),
-                            "poster": (
-                                f"https://image.tmdb.org/t/p/w500{poster_path}"
-                                if poster_path
-                                else "https://via.placeholder.com/500x750?text=Sem+Imagem"
-                            ),
-                            "backdrop": (
-                                f"https://image.tmdb.org/t/p/w1280{backdrop_path}"
-                                if backdrop_path
-                                else None
-                            ),
-                            "voto": round(item.get("vote_average", 0) * 10),
-                            "visao": item.get(
-                                "overview", "Sem sinopse disponível."
-                            ),
-                            "tipo": "filme",
-                        }
-                    )
-            return itens
-    except Exception as e:
-        print(f"Erro ao conectar com a API: {e}")
+                movie_id = item.get("id")
+                poster_path = item.get("poster_path")
+                backdrop_path = item.get("backdrop_path")
+                filmes.append(
+                    {
+                        "id": movie_id,
+                        "titulo": item.get(
+                            "title", item.get("name", "Sem Título")
+                        ),
+                        "lancamento": item.get(
+                            "release_date", item.get("first_air_date", "--")
+                        ),
+                        "poster": (
+                            f"https://image.tmdb.org/t/p/w500{poster_path}"
+                            if poster_path
+                            else "https://via.placeholder.com/500x750?text=Sem+Imagem"
+                        ),
+                        "backdrop": (
+                            f"https://image.tmdb.org/t/p/w1280{backdrop_path}"
+                            if backdrop_path
+                            else None
+                        ),
+                        "voto": round(item.get("vote_average", 0) * 10),
+                        "visao": item.get("overview", "Sem sinopse disponível."),
+                    }
+                )
+            return filmes
+    except Exception:
+        pass
     return []
 
 
@@ -205,10 +169,10 @@ if "filme_id_selecionado" not in st.session_state:
     st.session_state.filme_id_selecionado = None
 
 if "filtro_categoria" not in st.session_state:
-    st.session_state.filtro_categoria = "Tendências da Semana"
+    st.session_state.filtro_categoria = "Início"
 
 
-# --- CALLBACKS DE NAVEGAÇÃO DOS MENUS ---
+# --- CALLBACKS DOS MENUS ---
 def mudar_filmes():
     val = st.session_state.menu_filmes_key
     if val != "Filmes":
@@ -237,7 +201,7 @@ def mudar_awards():
         st.session_state.filme_id_selecionado = None
 
 
-# --- NAVBAR SUPERIOR ESTILO TMDB ---
+# --- NAVBAR SUPERIOR ---
 col_logo, col_filmes, col_series, col_pes, col_aw, col_mais = st.columns(
     [1.5, 1.2, 1.2, 1.2, 1.2, 1.2]
 )
@@ -245,7 +209,7 @@ col_logo, col_filmes, col_series, col_pes, col_aw, col_mais = st.columns(
 with col_logo:
     if st.button("CineDicas 🎬", key="logo_home_btn"):
         st.session_state.filme_id_selecionado = None
-        st.session_state.filtro_categoria = "Tendências da Semana"
+        st.session_state.filtro_categoria = "Início"
         st.rerun()
 
 with col_filmes:
@@ -256,7 +220,6 @@ with col_filmes:
             "Tendências da Semana",
             "Populares",
             "Em Cartaz",
-            "Próximas Estreias",
             "Mais Bem Avaliados",
         ],
         key="menu_filmes_key",
@@ -285,7 +248,7 @@ with col_pes:
 with col_aw:
     st.selectbox(
         "Awards",
-        ["Awards", "Melhores do Ano", "Filmes Premiados"],
+        ["Awards", "Filmes Premiados"],
         key="menu_awards_key",
         on_change=mudar_awards,
         label_visibility="collapsed",
@@ -301,33 +264,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Definir o endpoint correspondente à categoria escolhida
-cat = st.session_state.filtro_categoria
-endpoint_api = "trending/movie/week"
-titulo_secao = cat
-
-if cat == "Tendências da Semana":
-    endpoint_api = "trending/movie/week"
-elif cat == "Populares":
-    endpoint_api = "movie/popular"
-elif cat == "Em Cartaz":
-    endpoint_api = "movie/now_playing"
-elif cat == "Próximas Estreias":
-    endpoint_api = "movie/upcoming"
-elif cat == "Mais Bem Avaliados":
-    endpoint_api = "movie/top_rated"
-elif cat == "Séries Populares":
-    endpoint_api = "tv/popular"
-elif cat == "Séries Bem Avaliadas":
-    endpoint_api = "tv/top_rated"
-elif cat == "Artistas Populares":
-    endpoint_api = "person/popular"
-elif cat == "Melhores do Ano" or cat == "Filmes Premiados":
-    endpoint_api = "movie/top_rated"
-
-catalogo = carregar_catalogo(endpoint_api)
-
-# --- EXIBIÇÃO: DETALHES OU HOME ---
+# --- EXIBIÇÃO DA PÁGINA DE DETALHES OU HOME MULTI-SEÇÕES ---
 if st.session_state.filme_id_selecionado is not None:
     url_detalhe = f"https://api.themoviedb.org/3/movie/{st.session_state.filme_id_selecionado}?api_key={API_KEY}&language=pt-BR"
     resp = requests.get(url_detalhe)
@@ -357,7 +294,7 @@ if st.session_state.filme_id_selecionado is not None:
         }
 
     if filme_atual:
-        if st.button("⬅ Voltar para a Lista", key="voltar_lista_btn"):
+        if st.button("⬅ Voltar para a Início", key="voltar_lista_btn"):
             st.session_state.filme_id_selecionado = None
             st.rerun()
 
@@ -464,92 +401,180 @@ if st.session_state.filme_id_selecionado is not None:
                         f"<div style='font-size: 12px; color: #aaaaaa;'>{ator['personagem']}</div>",
                         unsafe_allow_html=True,
                     )
-    else:
-        st.error("Erro ao carregar os detalhes.")
-        if st.button("Voltar"):
-            st.session_state.filme_id_selecionado = None
-            st.rerun()
 
 else:
-    if not catalogo:
-        st.error(
-            "Não foi possível carregar os dados da API do TMDb. Verifique sua chave ou conexão."
-        )
-    else:
-        backdrops_disponiveis = [
-            item["backdrop"] for item in catalogo if item.get("backdrop")
-        ]
-        banner_img = (
-            random.choice(backdrops_disponiveis)
-            if backdrops_disponiveis
-            else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
+    # Se o usuário escolheu uma categoria específica pelo menu superior
+    cat = st.session_state.filtro_categoria
+    if cat != "Início":
+        endpoint = "trending/movie/week"
+        if cat == "Populares":
+            endpoint = "movie/popular"
+        elif cat == "Em Cartaz":
+            endpoint = "movie/now_playing"
+        elif cat == "Mais Bem Avaliados":
+            endpoint = "movie/top_rated"
+        elif cat == "Séries Populares":
+            endpoint = "tv/popular"
+        elif cat == "Séries Bem Avaliadas":
+            endpoint = "tv/top_rated"
+        elif cat == "Artistas Populares":
+            endpoint = "person/popular"
+
+        lista_cat = carregar_lista(endpoint)
+        st.markdown(
+            f"<h2 style='color: white; margin-bottom: 20px;'>{cat}</h2>",
+            unsafe_allow_html=True,
         )
 
+        cols_por_linha = 4
+        for i in range(0, len(lista_cat), cols_por_linha):
+            cols = st.columns(cols_por_linha)
+            for j in range(cols_por_linha):
+                if i + j < len(lista_cat):
+                    item = lista_cat[i + j]
+                    with cols[j]:
+                        st.image(item["poster"], use_column_width=True)
+                        st.markdown(
+                            f"""
+                            <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{item['titulo']}</div>
+                            <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {item['lancamento']}</div>
+                            <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {item['voto']}%</div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                        if st.button("Ver Detalhes", key=f"cat_{item['id']}"):
+                            st.session_state.filme_id_selecionado = item["id"]
+                            st.rerun()
+    else:
+        # --- HOME ESTILO PORTAL TMDB COMPLETO ---
+        tendencias = carregar_lista("trending/movie/week")
+        populares = carregar_lista("movie/popular")
+        em_cartaz = carregar_lista("movie/now_playing")
+
+        # 1. Hero Banner com Barra de Pesquisa
+        banner_img = (
+            random.choice([f["backdrop"] for f in tendencias if f["backdrop"]])
+            if tendencias
+            else "https://image.tmdb.org/t/p/w1280/hZkgoQYus5vegHoetLkCJzb17zJ.jpg"
+        )
         st.markdown(
             f"""
             <style>
-            .hero-container {{
+            .hero-home {{
                 background: linear-gradient(rgba(3, 37, 65, 0.8), rgba(3, 37, 65, 0.8)), url('{banner_img}');
                 background-size: cover;
                 background-position: center;
-                padding: 50px 40px;
+                padding: 40px;
                 border-radius: 8px;
-                color: #ffffff;
-                margin-bottom: 30px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                color: white;
+                margin-bottom: 25px;
             }}
             </style>
-            <div class="hero-container">
-                <h1 style="font-size: 40px; font-weight: 800; margin-bottom: 5px; color: #ffffff;">Bem-vindo(a).</h1>
-                <p style="font-size: 20px; font-weight: 600; margin-bottom: 25px; color: #ffffff;">Milhões de Filmes, Séries e Pessoas para Descobrir. Explore já.</p>
+            <div class="hero-home">
+                <h1 style="font-size: 38px; font-weight: 800; margin-bottom: 0;">Bem-vindo(a).</h1>
+                <p style="font-size: 18px; font-weight: 600; margin-bottom: 15px;">Milhões de Filmes, Séries e Pessoas para Descobrir. Explore já.</p>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        pesquisa = st.text_input(
+        termo_pesquisa = st.text_input(
             "🔍 Pesquisar...",
-            placeholder="Busque por um item...",
+            placeholder="Busque por um filme...",
             label_visibility="collapsed",
         )
 
-        filmes_exibidos = catalogo
-        if pesquisa:
-            filmes_exibidos = [
+        if termo_pesquisa:
+            # Se pesquisar, mostra os resultados filtrados
+            todos_filmes = list(
+                {f["id"]: f for f in (tendencias + populares + em_cartaz)}.values()
+            )
+            resultados = [
                 f
-                for f in catalogo
-                if pesquisa.lower() in f["titulo"].lower()
+                for f in todos_filmes
+                if termo_pesquisa.lower() in f["titulo"].lower()
             ]
-
-        st.markdown(
-            f"<h3 style='color: #ffffff; margin-top: 20px; margin-bottom: 20px;'>{titulo_secao}</h3>",
-            unsafe_allow_html=True,
-        )
-
-        if not filmes_exibidos:
-            st.warning("Nenhum item encontrado com esse termo.")
+            st.markdown(
+                f"<h3 style='color: white; margin-top: 20px;'>Resultados para '{termo_pesquisa}'</h3>",
+                unsafe_allow_html=True,
+            )
+            if resultados:
+                cols = st.columns(4)
+                for idx, filme in enumerate(resultados):
+                    with cols[idx % 4]:
+                        st.image(filme["poster"], use_column_width=True)
+                        st.markdown(
+                            f"""
+                            <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff;">{filme['titulo']}</div>
+                            <div style="font-size: 13px; color: #01b4e4; font-weight: bold;">⭐ {filme['voto']}%</div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                        if st.button("Ver Detalhes", key=f"pesq_{filme['id']}"):
+                            st.session_state.filme_id_selecionado = filme["id"]
+                            st.rerun()
+            else:
+                st.warning("Nenhum filme encontrado.")
         else:
-            cols_por_linha = 4
-            for i in range(0, len(filmes_exibidos), cols_por_linha):
-                cols = st.columns(cols_por_linha)
-                for j in range(cols_por_linha):
-                    if i + j < len(filmes_exibidos):
-                        item = filmes_exibidos[i + j]
-                        with cols[j]:
-                            st.image(item["poster"], use_column_width=True)
-                            st.markdown(
-                                f"""
-                                <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{item['titulo']}</div>
-                                <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">{item['lancamento']}</div>
-                                """,
-                                unsafe_allow_html=True,
-                            )
-                            # Se for filme, mostra o botão de detalhes; se for pessoa, exibe as informações principais
-                            if item.get("tipo") == "filme":
-                                if st.button(
-                                    "Ver Detalhes", key=f"det_card_{item['id']}"
-                                ):
-                                    st.session_state.filme_id_selecionado = item[
-                                        "id"
-                                    ]
-                                    st.rerun()
+            # 2. Seção Tendências
+            st.markdown(
+                "<h3 style='color: white; margin-top: 25px; margin-bottom: 15px;'>Tendências da Semana</h3>",
+                unsafe_allow_html=True,
+            )
+            cols_tend = st.columns(4)
+            for idx, filme in enumerate(tendencias[:4]):
+                with cols_tend[idx]:
+                    st.image(filme["poster"], use_column_width=True)
+                    st.markdown(
+                        f"""
+                        <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
+                        <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
+                        <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button("Ver Detalhes", key=f"home_tend_{filme['id']}"):
+                        st.session_state.filme_id_selecionado = filme["id"]
+                        st.rerun()
+
+            # 3. Seção Em Cartaz
+            st.markdown(
+                "<h3 style='color: white; margin-top: 35px; margin-bottom: 15px;'>Em Cartaz nos Cinemas</h3>",
+                unsafe_allow_html=True,
+            )
+            cols_cart = st.columns(4)
+            for idx, filme in enumerate(em_cartaz[:4]):
+                with cols_cart[idx]:
+                    st.image(filme["poster"], use_column_width=True)
+                    st.markdown(
+                        f"""
+                        <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
+                        <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
+                        <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button("Ver Detalhes", key=f"home_cart_{filme['id']}"):
+                        st.session_state.filme_id_selecionado = filme["id"]
+                        st.rerun()
+
+            # 4. Seção Populares
+            st.markdown(
+                "<h3 style='color: white; margin-top: 35px; margin-bottom: 15px;'>Filmes Populares</h3>",
+                unsafe_allow_html=True,
+            )
+            cols_pop = st.columns(4)
+            for idx, filme in enumerate(populares[:4]):
+                with cols_pop[idx]:
+                    st.image(filme["poster"], use_column_width=True)
+                    st.markdown(
+                        f"""
+                        <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
+                        <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
+                        <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if st.button("Ver Detalhes", key=f"home_pop_{filme['id']}"):
+                        st.session_state.filme_id_selecionado = filme["id"]
+                        st.rerun()
