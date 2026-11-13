@@ -130,35 +130,71 @@ def carregar_catalogo(endpoint="trending/movie/week"):
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            filmes = []
+            itens = []
             for item in data.get("results", []):
-                movie_id = item.get("id")
-                poster_path = item.get("poster_path")
-                backdrop_path = item.get("backdrop_path")
-                filmes.append(
-                    {
-                        "id": movie_id,
-                        "titulo": item.get(
-                            "title", item.get("name", "Sem Título")
-                        ),
-                        "lancamento": item.get(
-                            "release_date", item.get("first_air_date", "--")
-                        ),
-                        "poster": (
-                            f"https://image.tmdb.org/t/p/w500{poster_path}"
-                            if poster_path
-                            else "https://via.placeholder.com/500x750?text=Sem+Imagem"
-                        ),
-                        "backdrop": (
-                            f"https://image.tmdb.org/t/p/w1280{backdrop_path}"
-                            if backdrop_path
-                            else None
-                        ),
-                        "voto": round(item.get("vote_average", 0) * 10),
-                        "visao": item.get("overview", "Sem sinopse disponível."),
-                    }
-                )
-            return filmes
+                item_id = item.get("id")
+                # Se for a rota de pessoas populares, o campo de imagem é profile_path e o nome é name
+                if "person" in endpoint:
+                    profile_path = item.get("profile_path")
+                    # Conhecido por (known_for)
+                    conhecido_por = ", ".join(
+                        [
+                            k.get("title", k.get("name", ""))
+                            for k in item.get("known_for", [])
+                            if k.get("title") or k.get("name")
+                        ]
+                    )
+                    itens.append(
+                        {
+                            "id": item_id,
+                            "titulo": item.get("name", "Sem Nome"),
+                            "lancamento": (
+                                f"Conhecido(a) por: {conhecido_por[:30]}..."
+                                if conhecido_por
+                                else "Ator/Atriz"
+                            ),
+                            "poster": (
+                                f"https://image.tmdb.org/t/p/w500{profile_path}"
+                                if profile_path
+                                else "https://via.placeholder.com/500x750?text=Sem+Foto"
+                            ),
+                            "backdrop": None,
+                            "voto": round(item.get("popularity", 0)),
+                            "visao": f"Profissão: {item.get('known_for_department', 'Atuação')}.",
+                            "tipo": "pessoa",
+                        }
+                    )
+                else:
+                    poster_path = item.get("poster_path")
+                    backdrop_path = item.get("backdrop_path")
+                    itens.append(
+                        {
+                            "id": item_id,
+                            "titulo": item.get(
+                                "title", item.get("name", "Sem Título")
+                            ),
+                            "lancamento": item.get(
+                                "release_date",
+                                item.get("first_air_date", "--"),
+                            ),
+                            "poster": (
+                                f"https://image.tmdb.org/t/p/w500{poster_path}"
+                                if poster_path
+                                else "https://via.placeholder.com/500x750?text=Sem+Imagem"
+                            ),
+                            "backdrop": (
+                                f"https://image.tmdb.org/t/p/w1280{backdrop_path}"
+                                if backdrop_path
+                                else None
+                            ),
+                            "voto": round(item.get("vote_average", 0) * 10),
+                            "visao": item.get(
+                                "overview", "Sem sinopse disponível."
+                            ),
+                            "tipo": "filme",
+                        }
+                    )
+            return itens
     except Exception as e:
         print(f"Erro ao conectar com a API: {e}")
     return []
@@ -285,7 +321,7 @@ elif cat == "Séries Populares":
 elif cat == "Séries Bem Avaliadas":
     endpoint_api = "tv/top_rated"
 elif cat == "Artistas Populares":
-    endpoint_api = "person/popular"  # Nota: trataremos abaixo caso retorne pessoas
+    endpoint_api = "person/popular"
 elif cat == "Melhores do Ano" or cat == "Filmes Premiados":
     endpoint_api = "movie/top_rated"
 
@@ -473,7 +509,7 @@ else:
 
         pesquisa = st.text_input(
             "🔍 Pesquisar...",
-            placeholder="Busque por um filme...",
+            placeholder="Busque por um item...",
             label_visibility="collapsed",
         )
 
@@ -498,21 +534,22 @@ else:
                 cols = st.columns(cols_por_linha)
                 for j in range(cols_por_linha):
                     if i + j < len(filmes_exibidos):
-                        filme = filmes_exibidos[i + j]
+                        item = filmes_exibidos[i + j]
                         with cols[j]:
-                            st.image(filme["poster"], use_column_width=True)
+                            st.image(item["poster"], use_column_width=True)
                             st.markdown(
                                 f"""
-                                <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{filme['titulo']}</div>
-                                <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">Lançamento: {filme['lancamento']}</div>
-                                <div style="font-size: 13px; color: #01b4e4; font-weight: bold; margin-bottom: 10px;">⭐ Nota: {filme['voto']}%</div>
+                                <div style="font-weight: 700; font-size: 15px; margin-top: 8px; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{item['titulo']}</div>
+                                <div style="font-size: 13px; color: #aaaaaa; margin-bottom: 5px;">{item['lancamento']}</div>
                                 """,
                                 unsafe_allow_html=True,
                             )
-                            if st.button(
-                                "Ver Detalhes", key=f"det_card_{filme['id']}"
-                            ):
-                                st.session_state.filme_id_selecionado = filme[
-                                    "id"
-                                ]
-                                st.rerun()
+                            # Se for filme, mostra o botão de detalhes; se for pessoa, exibe as informações principais
+                            if item.get("tipo") == "filme":
+                                if st.button(
+                                    "Ver Detalhes", key=f"det_card_{item['id']}"
+                                ):
+                                    st.session_state.filme_id_selecionado = item[
+                                        "id"
+                                    ]
+                                    st.rerun()
